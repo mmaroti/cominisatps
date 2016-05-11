@@ -232,7 +232,7 @@ void Solver::cancelUntil(int level) {
         for (int c = trail.size()-1; c >= trail_lim[level]; c--){
             Var      x  = var(trail[c]);
             assigns [x] = l_Undef;
-            if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
+            if (phase_saving > 1 || ((phase_saving == 1) && c > trail_lim.last()))
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
         qhead = trail_lim[level];
@@ -654,13 +654,14 @@ void Solver::reduceDB()
     int limit = learnts_local.size() / 2;
     for (i = j = 0; i < learnts_local.size(); i++){
         Clause& c = ca[learnts_local[i]];
-        if (c.mark() == LOCAL)
+        if (c.mark() == LOCAL) {
             if (c.removable() && !locked(c) && i < limit)
                 removeClause(learnts_local[i]);
             else{
                 if (!c.removable()) limit++;
                 c.removable(true);
                 learnts_local[j++] = learnts_local[i]; }
+        }
     }
     learnts_local.shrink(i - j);
     local_learnts_dirty = false;
@@ -672,7 +673,7 @@ void Solver::reduceDB_Tier2()
     int i, j;
     for (i = j = 0; i < learnts_tier2.size(); i++){
         Clause& c = ca[learnts_tier2[i]];
-        if (c.mark() == TIER2) // No need to call 'cleanLearnts'.
+        if (c.mark() == TIER2) { // No need to call 'cleanLearnts'.
             if (!locked(c) && c.touched() + 30000 < conflicts){
                 learnts_local.push(learnts_tier2[i]);
                 c.mark(LOCAL);
@@ -681,6 +682,7 @@ void Solver::reduceDB_Tier2()
                 claBumpActivity(c);
             }else
                 learnts_tier2[j++] = learnts_tier2[i];
+        }
     }
     learnts_tier2.shrink(i - j);
     tier2_learnts_dirty = false;
@@ -906,34 +908,6 @@ double Solver::progressEstimate() const
     }
 
     return progress / nVars();
-}
-
-/*
-  Finite subsequences of the Luby-sequence:
-
-  0: 1
-  1: 1 1 2
-  2: 1 1 2 1 1 2 4
-  3: 1 1 2 1 1 2 4 1 1 2 1 1 2 4 8
-  ...
-
-
- */
-
-static double luby(double y, int x){
-
-    // Find the finite subsequence that contains index 'x', and the
-    // size of that subsequence:
-    int size, seq;
-    for (size = 1, seq = 0; size < x+1; seq++, size = 2*size+1);
-
-    while (size-1 != x){
-        size = (size-1)>>1;
-        seq--;
-        x = x % size;
-    }
-
-    return pow(y, seq);
 }
 
 // NOTE: assumptions passed in member-variable 'assumptions'.
