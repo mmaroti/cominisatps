@@ -1,10 +1,10 @@
-CXXFLAGS = -O2 -g -Wall -fmessage-length=0
+CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -I. -Wno-parentheses -Wno-unused-label -Wno-unused-function
 
-OBJS = src/myminisat.o
+OBJS = core/Main.o core/Solver.o utils/Options.o utils/System.o
 
-LIBS =
+LIBS = -s -lz
 
-TARGET = myminisat
+TARGET = cominisatps
 
 $(TARGET): $(OBJS)
 	$(CXX) -o $(TARGET) $(OBJS) $(LIBS)
