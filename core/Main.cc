@@ -196,7 +196,7 @@ int main(int argc, char** argv)
 #else
         return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
 #endif
-    } catch (OutOfMemoryException&){
+    } catch (std::bad_alloc&){
         printf("c ===============================================================================\n");
         printf("s UNKNOWN\n");
         exit(0);
