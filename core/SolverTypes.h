@@ -65,7 +65,6 @@ inline  int  var       (Lit p)              { return p.x >> 1; }
 // Mapping Literals to and from compact integers suitable for array indexing:
 inline  int  toInt     (Var v)              { return v; } 
 inline  int  toInt     (Lit p)              { return p.x; } 
-inline  Lit  toLit     (int i)              { Lit p; p.x = i; return p; } 
 
 //const Lit lit_Undef = mkLit(var_Undef, false);  // }- Useful special constants.
 //const Lit lit_Error = mkLit(var_Undef, true );  // }
