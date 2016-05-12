@@ -96,7 +96,6 @@ Solver::Solver() :
   , simpDB_props       (0)
   , order_heap_no_r    (VarOrderLt(activity_no_r))
   , order_heap_glue_r  (VarOrderLt(activity_glue_r))
-  , progress_estimate  (0)
   , remove_satisfied   (true)
 
   , core_lbd_cut       (3)
@@ -822,18 +821,6 @@ lbool Solver::search(int& nof_conflicts)
             varDecayActivity();
             claDecayActivity();
 
-            /*if (--learntsize_adjust_cnt == 0){
-                learntsize_adjust_confl *= learntsize_adjust_inc;
-                learntsize_adjust_cnt    = (int)learntsize_adjust_confl;
-                max_learnts             *= learntsize_inc;
-
-                if (verbosity >= 1)
-                    printf("c | %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n",
-                           (int)conflicts,
-                           (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals,
-                           (int)max_learnts, nLearnts(), (double)learnts_literals/nLearnts(), progressEstimate()*100);
-            }*/
-
         }else{
             // NO CONFLICT
             bool restart = false;
@@ -846,8 +833,6 @@ lbool Solver::search(int& nof_conflicts)
             }
             if (restart/* || !withinBudget()*/){
                 lbd_queue.clear();
-                // Reached bound on number of conflicts:
-                progress_estimate = progressEstimate();
                 cancelUntil(0);
                 return l_Undef; }
 
@@ -893,21 +878,6 @@ lbool Solver::search(int& nof_conflicts)
             uncheckedEnqueue(next);
         }
     }
-}
-
-
-double Solver::progressEstimate() const
-{
-    double  progress = 0;
-    double  F = 1.0 / nVars();
-
-    for (int i = 0; i <= decisionLevel(); i++){
-        int beg = i == 0 ? 0 : trail_lim[i - 1];
-        int end = i == decisionLevel() ? trail.size() : trail_lim[i];
-        progress += pow(F, i) * (end - beg);
-    }
-
-    return progress / nVars();
 }
 
 // NOTE: assumptions passed in member-variable 'assumptions'.
