@@ -36,7 +36,6 @@ static const char* _cat = "CORE";
 static DoubleOption  opt_var_decay_no_r    (_cat, "var-decay-no-res",   "The variable activity decay factor",            0.999,    DoubleRange(0, false, 1, false));
 static DoubleOption  opt_var_decay_glue_r  (_cat, "var-decay-glue-res", "The variable activity decay factor",            0.95,     DoubleRange(0, false, 1, false));
 static DoubleOption  opt_clause_decay      (_cat, "cla-decay",   "The clause activity decay factor",              0.999,    DoubleRange(0, false, 1, false));
-static DoubleOption  opt_random_var_freq   (_cat, "rnd-freq",    "The frequency with which the decision heuristic tries to choose a random variable", 0, DoubleRange(0, true, 1, true));
 static DoubleOption  opt_random_seed       (_cat, "rnd-seed",    "Used by the random variable selection",         91648253, DoubleRange(0, false, HUGE_VAL, false));
 static IntOption     opt_ccmin_mode        (_cat, "ccmin-mode",  "Controls conflict clause minimization (0=none, 1=basic, 2=deep)", 2, IntRange(0, 2));
 static IntOption     opt_phase_saving      (_cat, "phase-saving", "Controls the level of phase saving (0=none, 1=limited, 2=full)", 2, IntRange(0, 2));
@@ -58,12 +57,10 @@ Solver::Solver() :
   , var_decay_no_r   (opt_var_decay_no_r)
   , var_decay_glue_r (opt_var_decay_glue_r)
   , clause_decay     (opt_clause_decay)
-  , random_var_freq  (opt_random_var_freq)
   , random_seed      (opt_random_seed)
   , glucose_restart  (false)
   , ccmin_mode       (opt_ccmin_mode)
   , phase_saving     (opt_phase_saving)
-  , rnd_pol          (false)
   , rnd_init_act     (opt_rnd_init_act)
   , garbage_frac     (opt_garbage_frac)
   , restart_first    (opt_restart_first)
@@ -248,12 +245,6 @@ Lit Solver::pickBranchLit()
 {
     Var next = var_Undef;
     Heap<VarOrderLt>& order_heap = glucose_restart ? order_heap_glue_r : order_heap_no_r;
-
-    // Random decision:
-    /*if (drand(random_seed) < random_var_freq && !order_heap.empty()){
-        next = order_heap[irand(random_seed,order_heap.size())];
-        if (value(next) == l_Undef && decision[next])
-            rnd_decisions++; }*/
 
     // Activity based decision:
     while (next == var_Undef || value(next) != l_Undef || !decision[next])
