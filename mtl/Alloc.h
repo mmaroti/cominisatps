@@ -21,10 +21,19 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Alloc_h
 #define Minisat_Alloc_h
 
-#include "mtl/XAlloc.h"
-#include "mtl/Vec.h"
-
 namespace Minisat {
+
+//=================================================================================================
+// Simple layer on top of malloc/realloc to catch out-of-memory situtaions and provide some typing:
+
+static inline void* xrealloc(void *ptr, size_t size)
+{
+    void* mem = realloc(ptr, size);
+    if (mem == NULL && errno == ENOMEM){
+        throw std::bad_alloc();
+    }else
+        return mem;
+}
 
 //=================================================================================================
 // Simple Region-based memory allocator:
