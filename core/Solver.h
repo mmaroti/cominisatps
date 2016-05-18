@@ -157,9 +157,6 @@ public:
     bool      rnd_init_act;       // Initialize variable activities with a small random value.
     double    garbage_frac;       // The fraction of wasted memory allowed before a garbage collection is triggered.
 
-    int       restart_first;      // The initial restart limit.                                                                (default 100)
-    double    restart_inc;        // The factor with which the restart limit is multiplied in each restart.                    (default 1.5)
-
     // Statistics: (read-only member variable)
     //
     uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts, conflicts_glue;
