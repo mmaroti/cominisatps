@@ -325,49 +325,6 @@ void OccLists<Idx,Vec,Deleted>::clean(const Idx& idx)
     dirty[toInt(idx)] = 0;
 }
 
-
-//=================================================================================================
-// CMap -- a class for mapping clauses to values:
-
-
-template<class T>
-class CMap
-{
-    struct CRefHash {
-        uint32_t operator()(CRef cr) const { return (uint32_t)cr; } };
-
-    typedef Map<CRef, T, CRefHash> HashTable;
-    HashTable map;
-        
- public:
-    // Size-operations:
-    void     clear       ()                           { map.clear(); }
-    int      size        ()                const      { return map.elems(); }
-
-    
-    // Insert/Remove/Test mapping:
-    void     insert      (CRef cr, const T& t){ map.insert(cr, t); }
-    void     growTo      (CRef cr, const T& t){ map.insert(cr, t); } // NOTE: for compatibility
-    void     remove      (CRef cr)            { map.remove(cr); }
-    bool     has         (CRef cr, T& t)      { return map.peek(cr, t); }
-
-    // Vector interface (the clause 'c' must already exist):
-    const T& operator [] (CRef cr) const      { return map[cr]; }
-    T&       operator [] (CRef cr)            { return map[cr]; }
-
-    // Iteration (not transparent at all at the moment):
-    int  bucket_count() const { return map.bucket_count(); }
-    const vec<typename HashTable::Pair>& bucket(int i) const { return map.bucket(i); }
-
-    // Move contents to other map:
-    void moveTo(CMap& other){ map.moveTo(other.map); }
-
-    // TMP debug:
-    void debug(){
-        printf(" --- size = %d, bucket_count = %d\n", size(), map.bucket_count()); }
-};
-
-
 /*_________________________________________________________________________________________________
 |
 |  subsumes : (other : const Clause&)  ->  Lit
