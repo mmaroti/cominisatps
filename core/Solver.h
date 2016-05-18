@@ -159,11 +159,6 @@ public:
 
     int       restart_first;      // The initial restart limit.                                                                (default 100)
     double    restart_inc;        // The factor with which the restart limit is multiplied in each restart.                    (default 1.5)
-    double    learntsize_factor;  // The intitial limit for learnt clauses is a factor of the original clauses.                (default 1 / 3)
-    double    learntsize_inc;     // The limit for learnt clauses is multiplied with this factor each restart.                 (default 1.1)
-
-    int       learntsize_adjust_start_confl;
-    double    learntsize_adjust_inc;
 
     // Statistics: (read-only member variable)
     //
@@ -248,10 +243,6 @@ protected:
 
     vec<uint64_t>       seen2;    // Mostly for efficient LBD computation. 'seen2[i]' will indicate if decision level or variable 'i' has been seen.
     uint64_t            counter;  // Simple counter for marking purpose with 'seen2'.
-
-    double              max_learnts;
-    double              learntsize_adjust_confl;
-    int                 learntsize_adjust_cnt;
 
     // Resource contraints:
     //

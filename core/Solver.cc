@@ -66,15 +66,6 @@ Solver::Solver() :
   , restart_first    (opt_restart_first)
   , restart_inc      (opt_restart_inc)
 
-    // Parameters (the rest):
-    //
-  , learntsize_factor((double)1/(double)3), learntsize_inc(1.1)
-
-    // Parameters (experimental):
-    //
-  , learntsize_adjust_start_confl (100)
-  , learntsize_adjust_inc         (1.5)
-
     // Statistics: (formerly in 'SolverStats')
     //
   , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0), conflicts_glue(0)
@@ -880,9 +871,6 @@ lbool Solver::solve_()
 
     solves++;
 
-    max_learnts               = nClauses() * learntsize_factor;
-    learntsize_adjust_confl   = learntsize_adjust_start_confl;
-    learntsize_adjust_cnt     = (int)learntsize_adjust_confl;
     lbool   status            = l_Undef;
 
     if (verbosity >= 1){
