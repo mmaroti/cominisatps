@@ -1,4 +1,4 @@
-CXXFLAGS = -O3 -Wall -Wno-unused-label -std=c++11 -I.
+CXXFLAGS = -O3 -Wall -std=c++11 -I.
 
 OBJS = core/Main.o core/Solver.o utils/Options.o utils/System.o
 HEADERS = $(wildcard **/*.h)
