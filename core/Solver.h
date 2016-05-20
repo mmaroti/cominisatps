@@ -375,10 +375,7 @@ inline void     Solver::setDecisionVar(Var v, bool b)
         order_heap_glue_r.insert(v); }
 }
 
-// FIXME: after the introduction of asynchronous interrruptions the solve-versions that return a
-// pure bool do not give a safe interface. Either interrupts must be possible to turn off here, or
-// all calls to solve must return an 'lbool'. I'm not yet sure which I prefer.
-inline bool     Solver::solve         ()                    { return solve_() == l_True; }
+inline bool     Solver::solve         () { return solve_() == l_True; }
 inline lbool    Solver::solveLimited  () { return solve_(); }
 inline bool     Solver::okay          ()      const   { return ok; }
 
