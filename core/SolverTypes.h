@@ -129,7 +129,7 @@ class Clause {
         unsigned lbd       : 26;
         unsigned removable : 1;
         unsigned size      : 32; }                            header;
-    union { Lit lit; float act; uint32_t abs; uint32_t touched; CRef rel; } data[0];
+    union { Lit lit; float act; uint32_t touched; CRef rel; } data[0];
 
     friend class ClauseAllocator;
 
@@ -147,22 +147,13 @@ class Clause {
         for (int i = 0; i < ps.size(); i++) 
             data[i].lit = ps[i];
 
-        if (header.has_extra){
-            if (header.learnt){
+        if (header.has_extra && header.learnt){
                 data[header.size].act = 0; 
                 data[header.size+1].touched = 0;
-            }else 
-                calcAbstraction(); }
+        }
     }
 
 public:
-    void calcAbstraction() {
-        assert(header.has_extra);
-        uint32_t abstraction = 0;
-        for (int i = 0; i < size(); i++)
-            abstraction |= 1 << (var(data[i].lit) & 31);
-        data[header.size].abs = abstraction;  }
-
 
     int          size        ()      const   { return header.size; }
     void         shrink      (int i)         { assert(i <= size()); if (header.has_extra) data[header.size-i] = data[header.size]; header.size -= i; }
@@ -190,7 +181,6 @@ public:
 
     uint32_t&    touched     ()              { assert(header.has_extra && header.learnt); return data[header.size+1].touched; }
     float&       activity    ()              { assert(header.has_extra); return data[header.size].act; }
-    uint32_t     abstraction () const        { assert(header.has_extra); return data[header.size].abs; }
 };
 
 
@@ -258,7 +248,6 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
             to[cr].set_lbd(c.lbd());
             to[cr].removable(c.removable());
         }
-        else if (to[cr].has_extra()) to[cr].calcAbstraction();
     }
 };
 
