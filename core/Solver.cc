@@ -468,46 +468,6 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
     return true;
 }
 
-
-/*_________________________________________________________________________________________________
-|
-|  analyzeFinal : (p : Lit)  ->  [void]
-|
-|  Description:
-|    Specialized analysis procedure to express the final conflict in terms of assumptions.
-|    Calculates the (possibly empty) set of assumptions that led to the assignment of 'p', and
-|    stores the result in 'out_conflict'.
-|________________________________________________________________________________________________@*/
-void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
-{
-    out_conflict.clear();
-    out_conflict.push(p);
-
-    if (decisionLevel() == 0)
-        return;
-
-    seen[var(p)] = 1;
-
-    for (int i = trail.size()-1; i >= trail_lim[0]; i--){
-        Var x = var(trail[i]);
-        if (seen[x]){
-            if (reason(x) == CRef_Undef){
-                assert(level(x) > 0);
-                out_conflict.push(~trail[i]);
-            }else{
-                Clause& c = ca[reason(x)];
-                for (int j = c.size() == 2 ? 0 : 1; j < c.size(); j++)
-                    if (level(var(c[j])) > 0)
-                        seen[var(c[j])] = 1;
-            }
-            seen[x] = 0;
-        }
-    }
-
-    seen[var(p)] = 0;
-}
-
-
 void Solver::uncheckedEnqueue(Lit p, CRef from)
 {
     assert(value(p) == l_Undef);
@@ -821,31 +781,12 @@ lbool Solver::search(int& nof_conflicts)
                 next_L_reduce = conflicts + 15000;
                 reduceDB(); }
 
-            Lit next = lit_Undef;
-            /*while (decisionLevel() < assumptions.size()){
-                // Perform user provided assumption:
-                Lit p = assumptions[decisionLevel()];
-                if (value(p) == l_True){
-                    // Dummy decision level:
-                    newDecisionLevel();
-                }else if (value(p) == l_False){
-                    analyzeFinal(~p, conflict);
-                    return l_False;
-                }else{
-                    next = p;
-                    break;
-                }
-            }
+            decisions++;
+            Lit next = pickBranchLit();
 
-            if (next == lit_Undef)*/{
-                // New variable decision:
-                decisions++;
-                next = pickBranchLit();
-
-                if (next == lit_Undef)
-                    // Model found:
-                    return l_True;
-            }
+            if (next == lit_Undef)
+                // Model found:
+                return l_True;
 
             // Increase decision level and enqueue 'next'
             newDecisionLevel();
