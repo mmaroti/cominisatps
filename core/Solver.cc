@@ -795,7 +795,6 @@ lbool Solver::search(int& nof_conflicts)
     }
 }
 
-// NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
     model.clear();
