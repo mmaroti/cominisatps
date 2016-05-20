@@ -118,12 +118,6 @@ public:
     int     nVars      ()      const;       // The current number of variables.
     int     nFreeVars  ()      const;
 
-    // Resource contraints:
-    //
-    void    setConfBudget(int64_t x);
-    void    setPropBudget(int64_t x);
-    void    budgetOff();
-
     // Memory managment:
     //
     virtual void garbageCollect();
@@ -232,11 +226,6 @@ protected:
     vec<uint64_t>       seen2;    // Mostly for efficient LBD computation. 'seen2[i]' will indicate if decision level or variable 'i' has been seen.
     uint64_t            counter;  // Simple counter for marking purpose with 'seen2'.
 
-    // Resource contraints:
-    //
-    int64_t             conflict_budget;    // -1 means no budget.
-    int64_t             propagation_budget; // -1 means no budget.
-
     // Main internal methods:
     //
     void     insertVarOrder   (Var x);                                                 // Insert a variable in the decision order priority queue.
@@ -279,7 +268,6 @@ protected:
     uint32_t abstractLevel    (Var x) const; // Used to represent an abstraction of sets of decision levels.
     CRef     reason           (Var x) const;
     int      level            (Var x) const;
-    bool     withinBudget     ()      const;
 
     template<class V> int computeLBD(const V& c) {
         int lbd = 0;
@@ -386,17 +374,11 @@ inline void     Solver::setDecisionVar(Var v, bool b)
         order_heap_no_r.insert(v);
         order_heap_glue_r.insert(v); }
 }
-inline void     Solver::setConfBudget(int64_t x){ conflict_budget    = conflicts    + x; }
-inline void     Solver::setPropBudget(int64_t x){ propagation_budget = propagations + x; }
-inline void     Solver::budgetOff(){ conflict_budget = propagation_budget = -1; }
-inline bool     Solver::withinBudget() const {
-    return (conflict_budget    < 0 || conflicts < (uint64_t)conflict_budget) &&
-           (propagation_budget < 0 || propagations < (uint64_t)propagation_budget); }
 
 // FIXME: after the introduction of asynchronous interrruptions the solve-versions that return a
 // pure bool do not give a safe interface. Either interrupts must be possible to turn off here, or
 // all calls to solve must return an 'lbool'. I'm not yet sure which I prefer.
-inline bool     Solver::solve         ()                    { budgetOff(); return solve_() == l_True; }
+inline bool     Solver::solve         ()                    { return solve_() == l_True; }
 inline lbool    Solver::solveLimited  () { return solve_(); }
 inline bool     Solver::okay          ()      const   { return ok; }
 

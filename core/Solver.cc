@@ -89,11 +89,6 @@ Solver::Solver() :
   , next_L_reduce      (15000)
 
   , counter            (0)
-
-    // Resource constraints:
-    //
-  , conflict_budget    (-1)
-  , propagation_budget (-1)
 {}
 
 
@@ -764,7 +759,7 @@ lbool Solver::search(int& nof_conflicts)
                 restart = lbd_queue.full() && (lbd_queue.avg() * K > global_lbd_sum / conflicts_glue);
                 cached = true;
             }
-            if (restart/* || !withinBudget()*/){
+            if (restart){
                 lbd_queue.clear();
                 cancelUntil(0);
                 return l_Undef; }
@@ -817,7 +812,7 @@ lbool Solver::solve_()
 
     glucose_restart = true;
     int init = 10000;
-    while (status == l_Undef && init > 0 /*&& withinBudget()*/)
+    while (status == l_Undef && init > 0)
         status = search(init);
     if (status == l_Undef)
         glucose_restart = false;
@@ -827,9 +822,9 @@ lbool Solver::solve_()
     for (;;){
         int weighted = glucose_restart ? phase_allotment * 2 : phase_allotment;
 
-        while (status == l_Undef && weighted > 0 /*&& withinBudget()*/)
+        while (status == l_Undef && weighted > 0)
             status = search(weighted);
-        if (status != l_Undef/* || !withinBudget()*/)
+        if (status != l_Undef)
             break; // Should break here for correctness in incremental SAT solving.
 
         glucose_restart = !glucose_restart;
