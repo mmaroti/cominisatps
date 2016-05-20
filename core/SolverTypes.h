@@ -191,9 +191,6 @@ public:
     uint32_t&    touched     ()              { assert(header.has_extra && header.learnt); return data[header.size+1].touched; }
     float&       activity    ()              { assert(header.has_extra); return data[header.size].act; }
     uint32_t     abstraction () const        { assert(header.has_extra); return data[header.size].abs; }
-
-    Lit          subsumes    (const Clause& other) const;
-    void         strengthen  (Lit p);
 };
 
 
@@ -320,56 +317,6 @@ public:
 		dirties.clear(free);
 	}
 };
-
-/*_________________________________________________________________________________________________
-|
-|  subsumes : (other : const Clause&)  ->  Lit
-|  
-|  Description:
-|       Checks if clause subsumes 'other', and at the same time, if it can be used to simplify 'other'
-|       by subsumption resolution.
-|  
-|    Result:
-|       lit_Error  - No subsumption or simplification
-|       lit_Undef  - Clause subsumes 'other'
-|       p          - The literal p can be deleted from 'other'
-|________________________________________________________________________________________________@*/
-inline Lit Clause::subsumes(const Clause& other) const
-{
-    //if (other.size() < size() || (extra.abst & ~other.extra.abst) != 0)
-    //if (other.size() < size() || (!learnt() && !other.learnt() && (extra.abst & ~other.extra.abst) != 0))
-    assert(!header.learnt);   assert(!other.header.learnt);
-    assert(header.has_extra); assert(other.header.has_extra);
-    if (other.header.size < header.size || (data[header.size].abs & ~other.data[other.header.size].abs) != 0)
-        return lit_Error;
-
-    Lit        ret = lit_Undef;
-    const Lit* c   = (const Lit*)(*this);
-    const Lit* d   = (const Lit*)other;
-
-    for (unsigned i = 0; i < header.size; i++) {
-        // search for c[i] or ~c[i]
-        for (unsigned j = 0; j < other.header.size; j++)
-            if (c[i] == d[j])
-                goto ok;
-            else if (ret == lit_Undef && c[i] == ~d[j]){
-                ret = c[i];
-                goto ok;
-            }
-
-        // did not find it
-        return lit_Error;
-    ok:;
-    }
-
-    return ret;
-}
-
-inline void Clause::strengthen(Lit p)
-{
-    remove(*this, p);
-    calcAbstraction();
-}
 
 //=================================================================================================
 }
