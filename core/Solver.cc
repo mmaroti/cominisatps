@@ -92,14 +92,11 @@ Solver::Solver() :
 {}
 
 
-Solver::~Solver()
-{
+Solver::~Solver() {
 }
-
 
 //=================================================================================================
 // Minor methods:
-
 
 // Creates a new SAT variable in the solver. If 'decision' is cleared, variable will not be
 // used as a decision variable (NOTE! This has effects on the meaning of a SATISFIABLE result).
@@ -125,8 +122,7 @@ Var Solver::newVar(bool sign, bool dvar)
 }
 
 
-bool Solver::addClause_(vec<Lit>& ps)
-{
+bool Solver::addClause_(vec<Lit>& ps) {
     assert(decisionLevel() == 0);
     if (!ok) return false;
 
@@ -154,7 +150,6 @@ bool Solver::addClause_(vec<Lit>& ps)
     return true;
 }
 
-
 void Solver::attachClause(CRef cr) {
     const Clause& c = ca[cr];
     assert(c.size() > 1);
@@ -162,8 +157,8 @@ void Solver::attachClause(CRef cr) {
     ws[~c[0]].push(Watcher(cr, c[1]));
     ws[~c[1]].push(Watcher(cr, c[0]));
     if (c.learnt()) learnts_literals += c.size();
-    else            clauses_literals += c.size(); }
-
+    else            clauses_literals += c.size();
+}
 
 void Solver::detachClause(CRef cr, bool strict) {
     const Clause& c = ca[cr];
@@ -180,8 +175,8 @@ void Solver::detachClause(CRef cr, bool strict) {
     }
 
     if (c.learnt()) learnts_literals -= c.size();
-    else            clauses_literals -= c.size(); }
-
+    else            clauses_literals -= c.size();
+}
 
 void Solver::removeClause(CRef cr) {
     Clause& c = ca[cr];
@@ -194,13 +189,12 @@ void Solver::removeClause(CRef cr) {
     ca.free(cr);
 }
 
-
 bool Solver::satisfied(const Clause& c) const {
     for (int i = 0; i < c.size(); i++)
         if (value(c[i]).isTrue())
             return true;
-    return false; }
-
+    return false;
+}
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -221,7 +215,6 @@ void Solver::cancelUntil(int level) {
 //=================================================================================================
 // Major methods:
 
-
 Lit Solver::pickBranchLit()
 {
     Var next = var_Undef;
@@ -236,7 +229,6 @@ Lit Solver::pickBranchLit()
 
     return mkLit(next, polarity[next]);
 }
-
 
 /*_________________________________________________________________________________________________
 |
@@ -255,6 +247,7 @@ Lit Solver::pickBranchLit()
 |        rest of literals. There may be others from the same level though.
 |
 |________________________________________________________________________________________________@*/
+
 void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd)
 {
     int pathC = 0;
@@ -392,7 +385,6 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, int& ou
 #endif
 }
 
-
 // Try further learnt clause minimization by means of binary clause resolution.
 bool Solver::binResMinimize(vec<Lit>& out_learnt)
 {
@@ -424,7 +416,6 @@ bool Solver::binResMinimize(vec<Lit>& out_learnt)
     }
     return to_remove != 0;
 }
-
 
 // Check if 'p' can be removed. 'abstract_levels' is used to abort early if the algorithm is
 // visiting literals at levels that cannot be removed later.
@@ -470,7 +461,6 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
     trail.push_(p);
 }
 
-
 /*_________________________________________________________________________________________________
 |
 |  propagate : [void]  ->  [Clause*]
@@ -482,6 +472,7 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
 |    Post-conditions:
 |      * the propagation queue is empty, even if there was a conflict.
 |________________________________________________________________________________________________@*/
+
 CRef Solver::propagate()
 {
     CRef    confl     = CRef_Undef;
@@ -565,11 +556,13 @@ ExitProp:;
 |    Remove half of the learnt clauses, minus the clauses locked by the current assignment. Locked
 |    clauses are clauses that are reason to some assignment. Binary clauses are never removed.
 |________________________________________________________________________________________________@*/
+
 struct reduceDB_lt {
     ClauseAllocator& ca;
     reduceDB_lt(ClauseAllocator& ca_) : ca(ca_) {}
     bool operator () (CRef x, CRef y) const { return ca[x].activity() < ca[y].activity(); }
 };
+
 void Solver::reduceDB()
 {
     int     i, j;
@@ -595,6 +588,7 @@ void Solver::reduceDB()
 
     checkGarbage();
 }
+
 void Solver::reduceDB_Tier2()
 {
     int i, j;
@@ -641,7 +635,6 @@ void Solver::rebuildOrderHeap()
     order_heap_glue_r.build(vs);
 }
 
-
 /*_________________________________________________________________________________________________
 |
 |  simplify : [void]  ->  [bool]
@@ -658,6 +651,7 @@ void Solver::cleanLearnts(vec<CRef>& learnts, unsigned valid_mark)
             learnts[j++] = learnts[i];
     learnts.shrink(i - j);
 }
+
 bool Solver::simplify()
 {
     assert(decisionLevel() == 0);
@@ -854,19 +848,19 @@ void Solver::relocAll(ClauseAllocator& to)
 {
     // All watchers:
     //
-    // for (int i = 0; i < watches.size(); i++)
-    watches.cleanAll();
     watches_bin.cleanAll();
+	watches.cleanAll();
     for (int v = 0; v < nVars(); v++)
         for (int s = 0; s < 2; s++){
             Lit p = mkLit(v, s);
-            // printf(" >>> RELOCING: %s%d\n", sign(p)?"-":"", var(p)+1);
-            vec<Watcher>& ws = watches[p];
-            for (int j = 0; j < ws.size(); j++)
-                ca.reloc(ws[j].cref, to);
+
             vec<Watcher>& ws_bin = watches_bin[p];
             for (int j = 0; j < ws_bin.size(); j++)
                 ca.reloc(ws_bin[j].cref, to);
+
+            vec<Watcher>& ws = watches[p];
+            for (int j = 0; j < ws.size(); j++)
+                ca.reloc(ws[j].cref, to);
         }
 
     // All reasons:
