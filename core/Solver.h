@@ -321,8 +321,8 @@ inline bool     Solver::addClause       (Lit p)                 { add_tmp.clear(
 inline bool     Solver::addClause       (Lit p, Lit q)          { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
 inline bool     Solver::addClause       (Lit p, Lit q, Lit r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
 inline bool     Solver::locked          (const Clause& c) const {
-    int i = c.size() != 2 ? 0 : (value(c[0]) == l_True ? 0 : 1);
-    return value(c[i]) == l_True && reason(var(c[i])) != CRef_Undef && ca.lea(reason(var(c[i]))) == &c;
+    int i = c.size() != 2 ? 0 : (value(c[0]).isTrue() ? 0 : 1);
+    return value(c[i]).isTrue() && reason(var(c[i])) != CRef_Undef && ca.lea(reason(var(c[i]))) == &c;
 }
 inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size()); }
 
@@ -349,7 +349,7 @@ inline void     Solver::setDecisionVar(Var v, bool b)
         order_heap_glue_r.insert(v); }
 }
 
-inline bool     Solver::solve         () { return solve_() == l_True; }
+inline bool     Solver::solve         () { return solve_().isTrue(); }
 inline lbool    Solver::solveLimited  () { return solve_(); }
 inline bool     Solver::okay          ()      const   { return ok; }
 

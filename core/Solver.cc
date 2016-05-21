@@ -134,9 +134,9 @@ bool Solver::addClause_(vec<Lit>& ps)
     sort(ps);
     Lit p; int i, j;
     for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
-        if (value(ps[i]) == l_True || ps[i] == ~p)
+        if (value(ps[i]).isTrue() || ps[i] == ~p)
             return true;
-        else if (value(ps[i]) != l_False && ps[i] != p)
+        else if (!value(ps[i]).isFalse() && ps[i] != p)
             ps[j++] = p = ps[i];
     ps.shrink(i - j);
 
@@ -188,7 +188,7 @@ void Solver::removeClause(CRef cr) {
     detachClause(cr);
     // Don't leave pointers to free'd memory!
     if (locked(c)){
-        Lit implied = c.size() != 2 ? c[0] : (value(c[0]) == l_True ? c[0] : c[1]);
+        Lit implied = c.size() != 2 ? c[0] : (value(c[0]).isTrue() ? c[0] : c[1]);
         vardata[var(implied)].reason = CRef_Undef; }
     c.mark(1);
     ca.free(cr);
@@ -197,7 +197,7 @@ void Solver::removeClause(CRef cr) {
 
 bool Solver::satisfied(const Clause& c) const {
     for (int i = 0; i < c.size(); i++)
-        if (value(c[i]) == l_True)
+        if (value(c[i]).isTrue())
             return true;
     return false; }
 
@@ -228,7 +228,7 @@ Lit Solver::pickBranchLit()
     Heap<VarOrderLt>& order_heap = glucose_restart ? order_heap_glue_r : order_heap_no_r;
 
     // Activity based decision:
-    while (next == var_Undef || value(next) != l_Undef || !decision[next])
+    while (next == var_Undef || !value(next).isUndef() || !decision[next])
         if (order_heap.empty())
             return lit_Undef;
         else
@@ -270,8 +270,8 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, int& ou
         Clause& c = ca[confl];
 
         // For binary clauses, we don't rearrange literals in propagate(), so check and make sure the first is an implied lit.
-        if (p != lit_Undef && c.size() == 2 && value(c[0]) == l_False){
-            assert(value(c[1]) == l_True);
+        if (p != lit_Undef && c.size() == 2 && value(c[0]).isFalse()){
+            assert(value(c[1]).isTrue());
             Lit tmp = c[0];
             c[0] = c[1], c[1] = tmp; }
 
@@ -408,7 +408,7 @@ bool Solver::binResMinimize(vec<Lit>& out_learnt)
     for (int i = 0; i < ws.size(); i++){
         Lit the_other = ws[i].blocker;
         // Does 'the_other' appear negatively in 'out_learnt'?
-        if (seen2[var(the_other)] == counter && value(the_other) == l_True){
+        if (seen2[var(the_other)] == counter && value(the_other).isTrue()){
             to_remove++;
             seen2[var(the_other)] = counter - 1; // Remember to remove this variable.
         }
@@ -437,8 +437,8 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
         Clause& c = ca[reason(var(analyze_stack.last()))]; analyze_stack.pop();
 
         // Special handling for binary clauses like in 'analyze()'.
-        if (c.size() == 2 && value(c[0]) == l_False){
-            assert(value(c[1]) == l_True);
+        if (c.size() == 2 && value(c[0]).isFalse()){
+            assert(value(c[1]).isTrue());
             Lit tmp = c[0];
             c[0] = c[1], c[1] = tmp; }
 
@@ -464,7 +464,7 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
 
 void Solver::uncheckedEnqueue(Lit p, CRef from)
 {
-    assert(value(p) == l_Undef);
+    assert(value(p).isUndef());
     assigns[var(p)] = lbool(!sign(p));
     vardata[var(p)] = mkVarData(from, decisionLevel());
     trail.push_(p);
@@ -498,17 +498,17 @@ CRef Solver::propagate()
         vec<Watcher>& ws_bin = watches_bin[p];  // Propagate binary clauses first.
         for (int k = 0; k < ws_bin.size(); k++){
             Lit the_other = ws_bin[k].blocker;
-            if (value(the_other) == l_False){
+            if (value(the_other).isFalse()){
                 confl = ws_bin[k].cref;
                 goto ExitProp;
-            }else if(value(the_other) == l_Undef)
+            }else if(value(the_other).isUndef())
                 uncheckedEnqueue(the_other, ws_bin[k].cref);
         }
 
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;){
             // Try to avoid inspecting the clause:
             Lit blocker = i->blocker;
-            if (value(blocker) == l_True){
+            if (value(blocker).isTrue()){
                 *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
@@ -523,19 +523,19 @@ CRef Solver::propagate()
             // If 0th watch is true, then clause is already satisfied.
             Lit     first = c[0];
             Watcher w     = Watcher(cr, first);
-            if (first != blocker && value(first) == l_True){
+            if (first != blocker && value(first).isTrue()){
                 *j++ = w; continue; }
 
             // Look for new watch:
             for (int k = 2; k < c.size(); k++)
-                if (value(c[k]) != l_False){
+                if (!value(c[k]).isFalse()){
                     c[1] = c[k]; c[k] = false_lit;
                     watches[~c[1]].push(w);
                     goto NextClause; }
 
             // Did not find watch -- clause is unit under assignment:
             *j++ = w;
-            if (value(first) == l_False){
+            if (value(first).isFalse()){
                 confl = cr;
                 qhead = trail.size();
                 // Copy the remaining watches:
@@ -634,7 +634,7 @@ void Solver::rebuildOrderHeap()
 {
     vec<Var> vs;
     for (Var v = 0; v < nVars(); v++)
-        if (decision[v] && value(v) == l_Undef)
+        if (decision[v] && value(v).isUndef())
             vs.push(v);
 
     order_heap_no_r  .build(vs);
@@ -797,7 +797,7 @@ lbool Solver::solve_()
 
     solves++;
 
-    lbool   status            = l_Undef;
+    lbool status = l_Undef;
 
     if (verbosity >= 1){
         printf("c ============================[ Search Statistics ]==============================\n");
@@ -812,9 +812,9 @@ lbool Solver::solve_()
 
     glucose_restart = true;
     int init = 10000;
-    while (status == l_Undef && init > 0)
+    while (status.isUndef() && init > 0)
         status = search(init);
-    if (status == l_Undef)
+    if (status.isUndef())
         glucose_restart = false;
 
     // Search:
@@ -822,9 +822,9 @@ lbool Solver::solve_()
     for (;;){
         int weighted = glucose_restart ? phase_allotment * 2 : phase_allotment;
 
-        while (status == l_Undef && weighted > 0)
+        while (status.isUndef() && weighted > 0)
             status = search(weighted);
-        if (status != l_Undef)
+        if (!status.isUndef())
             break; // Should break here for correctness in incremental SAT solving.
 
         glucose_restart = !glucose_restart;
@@ -836,11 +836,11 @@ lbool Solver::solve_()
         printf("c ===============================================================================\n");
 
 
-    if (status == l_True){
+    if (status.isTrue()){
         // Extend & copy model:
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
-    }else if (status == l_False && conflict.size() == 0)
+    }else if (status.isFalse() && conflict.size() == 0)
         ok = false;
 
     cancelUntil(0);

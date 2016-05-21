@@ -94,25 +94,28 @@ public:
     lbool()       : value(0) { }
     explicit lbool(bool x) : value(!x) { }
 
-    bool  operator == (lbool b) const { return ((b.value&2) & (value&2)) | (!(b.value&2)&(value == b.value)); }
+    bool  operator == (lbool b) const { return ((b.value&2) & (value&2)) | (value == b.value); }
     bool  operator != (lbool b) const { return !(*this == b); }
+//    bool operator == (lbool b) const = delete;
+//    bool operator != (lbool b) const = delete;
     lbool operator ^  (bool  b) const { return lbool((uint8_t)(value^(uint8_t)b)); }
 
-    lbool operator && (lbool b) const { 
+    lbool operator && (lbool b) const {
         uint8_t sel = (this->value << 1) | (b.value << 3);
         uint8_t v   = (0xF7F755F4 >> sel) & 3;
-        return lbool(v); }
+        return lbool(v);
+    }
 
     lbool operator || (lbool b) const {
         uint8_t sel = (this->value << 1) | (b.value << 3);
         uint8_t v   = (0xFCFCF400 >> sel) & 3;
-        return lbool(v); }
+        return lbool(v);
+    }
 
-    friend int   toInt  (lbool l);
-    friend lbool toLbool(int   v);
+    bool isTrue() const { return value == 0; }
+    bool isFalse() const { return value == 1; }
+    bool isUndef() const { return value >= 2; }
 };
-inline int   toInt  (lbool l) { return l.value; }
-inline lbool toLbool(int   v) { return lbool((uint8_t)v);  }
 
 //=================================================================================================
 // Clause -- a simple class for representing a clause:

@@ -157,25 +157,16 @@ int main(int argc, char** argv)
         if (S.verbosity > 0){
             printStats(S);
             printf("\n"); }
-        printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
-
-	// disable printing to std::out to match MiniSat
-        if (false && ret == l_True){
-            printf("v ");
-            for (int i = 0; i < S.nVars(); i++)
-                if (S.model[i] != l_Undef)
-                    printf("%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
-            printf(" 0\n");
-        }
+        printf(ret.isTrue() ? "s SATISFIABLE\n" : ret.isFalse() ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
 
         if (res != NULL){
-            if (ret == l_True){
+            if (ret.isTrue()){
                 fprintf(res, "SAT\n");
                 for (int i = 0; i < S.nVars(); i++)
-                    if (S.model[i] != l_Undef)
-                        fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+                    if (!S.model[i].isUndef())
+                        fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i].isTrue())?"":"-", i+1);
                 fprintf(res, " 0\n");
-            }else if (ret == l_False)
+            }else if (ret.isFalse())
                 fprintf(res, "UNSAT\n");
             else
                 fprintf(res, "INDET\n");
@@ -183,9 +174,9 @@ int main(int argc, char** argv)
         }
 
 #ifdef NDEBUG
-        exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
+        exit(ret.isTrue() ? 10 : ret.isFalse() ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
 #else
-        return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
+        return (ret.isTrue() ? 10 : ret.isFalse() ? 20 : 0);
 #endif
     } catch (std::bad_alloc&){
         printf("c ===============================================================================\n");
