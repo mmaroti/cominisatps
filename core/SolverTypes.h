@@ -194,13 +194,10 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     static int clauseWord32Size(int size, int extras){
         return (sizeof(Clause) + (sizeof(Lit) * (size + extras))) / sizeof(uint32_t); }
  public:
-    bool extra_clause_field;
-
-    ClauseAllocator(uint32_t start_cap) : RegionAllocator<uint32_t>(start_cap), extra_clause_field(false){}
-    ClauseAllocator() : extra_clause_field(false){}
+    ClauseAllocator(uint32_t start_cap) : RegionAllocator<uint32_t>(start_cap) {}
+    ClauseAllocator() {}
 
     void moveTo(ClauseAllocator& to){
-        to.extra_clause_field = extra_clause_field;
         RegionAllocator<uint32_t>::moveTo(to); }
 
     template<class Lits>
@@ -208,10 +205,10 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     {
         assert(sizeof(Lit)      == sizeof(uint32_t));
         assert(sizeof(float)    == sizeof(uint32_t));
-        int extras = learnt ? 2 : (int)extra_clause_field;
+        int extras = learnt ? 2 : 0;
 
         CRef cid = RegionAllocator<uint32_t>::alloc(clauseWord32Size(ps.size(), extras));
-        new (lea(cid)) Clause(ps, extra_clause_field, learnt);
+        new (lea(cid)) Clause(ps, false, learnt);
 
         return cid;
     }
@@ -262,17 +259,6 @@ class OccLists {
 	vec<Idx> dirties;
 	Deleted deleted;
 
-	void clean(const Idx& idx) {
-		Vec& vec = occs[toInt(idx)];
-		int i, j;
-		for (i = j = 0; i < vec.size(); i++)
-			if (!deleted(vec[i]))
-				vec[j++] = vec[i];
-		vec.shrink(i - j);
-		assert(dirty[toInt(idx)]);
-		dirty[toInt(idx)] = 0;
-	}
-
 public:
 	OccLists(const Deleted& d) :
 			deleted(d) {
@@ -291,6 +277,16 @@ public:
 		for (int i = 0; i < dirties.size(); i++)
 			clean(dirties[i]);
 		dirties.clear();
+	}
+
+	void clean(const Idx& idx) {
+		Vec& vec = occs[toInt(idx)];
+		int i, j;
+		for (i = j = 0; i < vec.size(); i++)
+			if (!deleted(vec[i]))
+				vec[j++] = vec[i];
+		vec.shrink(i - j);
+		dirty[toInt(idx)] = 0;
 	}
 
 	void smudge(const Idx& idx) {
