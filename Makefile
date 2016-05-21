@@ -1,8 +1,8 @@
-CXXFLAGS = -O3 -Wall -std=c++11 -D NDEBUG -I.
+CXXFLAGS = -O3 -Wall -std=c++11 -I.
 
 OBJS = core/Main.o core/Solver.o utils/Options.o utils/System.o
 HEADERS = $(wildcard **/*.h)
-LIBS = -s -lz
+LIBS = -lz
 
 TARGET = cominisatps
 
@@ -14,5 +14,11 @@ $(TARGET): $(OBJS)
 
 all: $(TARGET)
 
+release: CXXFLAGS += -D NDEBUG
+release: LIBS += -s
+release: $(TARGET)
+
 clean:
 	rm -f $(OBJS) $(TARGET)
+
+.PHONY: all debug clean
