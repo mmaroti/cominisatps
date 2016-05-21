@@ -55,7 +55,6 @@ struct Lit {
     bool operator <  (Lit p) const { return x < p.x;  } // '<' makes p, ~p adjacent in the ordering.
 };
 
-
 inline  Lit  mkLit     (Var var, bool sign) { Lit p; p.x = var + var + (int)sign; return p; }
 inline  Lit  operator ~(Lit p)              { Lit q; q.x = p.x ^ 1; return q; }
 inline  Lit  operator ^(Lit p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
@@ -66,56 +65,50 @@ inline  int  var       (Lit p)              { return p.x >> 1; }
 inline  int  toInt     (Var v)              { return v; } 
 inline  int  toInt     (Lit p)              { return p.x; } 
 
-//const Lit lit_Undef = mkLit(var_Undef, false);  // }- Useful special constants.
-//const Lit lit_Error = mkLit(var_Undef, true );  // }
-
-const Lit lit_Undef = { -2 };  // }- Useful special constants.
-const Lit lit_Error = { -1 };  // }
-
+static const Lit lit_Undef = { -2 };  // }- Useful special constants.
+static const Lit lit_Error = { -1 };  // }
 
 //=================================================================================================
 // Lifted booleans:
-//
-// NOTE: this implementation is optimized for the case when comparisons between values are mostly
-//       between one variable and one constant. Some care had to be taken to make sure that gcc 
-//       does enough constant propagation to produce sensible code, and this appears to be somewhat
-//       fragile unfortunately.
-
-#define l_True  (lbool((uint8_t)0)) // gcc does not do constant propagation if these are real constants.
-#define l_False (lbool((uint8_t)1))
-#define l_Undef (lbool((uint8_t)2))
 
 class lbool {
-    uint8_t value;
+    int8_t value;
 
 public:
-    explicit lbool(uint8_t v) : value(v) { }
+    explicit lbool(int8_t x) : value(x) { }
 
-    lbool()       : value(0) { }
-    explicit lbool(bool x) : value(!x) { }
+    lbool() : value(0) { }
 
-    bool  operator == (lbool b) const { return ((b.value&2) & (value&2)) | (value == b.value); }
-    bool  operator != (lbool b) const { return !(*this == b); }
-//    bool operator == (lbool b) const = delete;
-//    bool operator != (lbool b) const = delete;
-    lbool operator ^  (bool  b) const { return lbool((uint8_t)(value^(uint8_t)b)); }
+    explicit lbool(bool x) : value(x ? (int8_t) 1 : (int8_t) -1) { }
+
+    lbool operator ^ (bool b) const {
+        return lbool(b ? (int8_t) -value : value);
+    }
 
     lbool operator && (lbool b) const {
-        uint8_t sel = (this->value << 1) | (b.value << 3);
-        uint8_t v   = (0xF7F755F4 >> sel) & 3;
-        return lbool(v);
+        return lbool(value <= b.value ? value : b.value);
     }
 
     lbool operator || (lbool b) const {
-        uint8_t sel = (this->value << 1) | (b.value << 3);
-        uint8_t v   = (0xFCFCF400 >> sel) & 3;
-        return lbool(v);
+        return lbool(value >= b.value ? value : b.value);
     }
 
-    bool isTrue() const { return value == 0; }
-    bool isFalse() const { return value == 1; }
-    bool isUndef() const { return value >= 2; }
+    bool isTrue() const {
+        return value > 0;
+    }
+
+    bool isFalse() const {
+        return value < 0;
+    }
+
+    bool isUndef() const {
+        return value == 0;
+    }
 };
+
+static const lbool l_True = lbool((int8_t) 1);
+static const lbool l_False = lbool((int8_t) -1);
+static const lbool l_Undef = lbool((int8_t) 0);
 
 //=================================================================================================
 // Clause -- a simple class for representing a clause:
