@@ -122,12 +122,13 @@ typedef RegionAllocator<uint32_t>::Ref CRef;
 
 class Clause {
     struct {
-        unsigned mark      : 2;
         unsigned learnt    : 1;
+        unsigned mark      : 2;
         unsigned reloced   : 1;
         unsigned removable : 1;
         unsigned lbd       : 27;
-        unsigned size      : 32; }                            header;
+        uint32_t size;
+    } header;
     union { Lit lit; float act; uint32_t touched; CRef rel; } data[0];
 
     friend class ClauseAllocator;
@@ -135,12 +136,12 @@ class Clause {
     // NOTE: This constructor cannot be used directly (doesn't allocate enough memory).
     template<class V>
     Clause(const V& ps, bool learnt) {
-        header.mark      = 0;
-        header.learnt    = learnt;
-        header.reloced   = 0;
         header.size      = ps.size();
-        header.lbd       = 0;
+        header.learnt    = learnt;
+        header.mark      = 0;
+        header.reloced   = 0;
         header.removable = 1;
+        header.lbd       = 0;
 
         for (int i = 0; i < ps.size(); i++) 
             data[i].lit = ps[i];
