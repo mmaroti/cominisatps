@@ -124,10 +124,9 @@ class Clause {
     struct {
         unsigned mark      : 2;
         unsigned learnt    : 1;
-        unsigned has_extra : 1;
         unsigned reloced   : 1;
-        unsigned lbd       : 26;
         unsigned removable : 1;
+        unsigned lbd       : 27;
         unsigned size      : 32; }                            header;
     union { Lit lit; float act; uint32_t touched; CRef rel; } data[0];
 
@@ -135,10 +134,9 @@ class Clause {
 
     // NOTE: This constructor cannot be used directly (doesn't allocate enough memory).
     template<class V>
-    Clause(const V& ps, bool use_extra, bool learnt) {
+    Clause(const V& ps, bool learnt) {
         header.mark      = 0;
         header.learnt    = learnt;
-        header.has_extra = learnt | use_extra;
         header.reloced   = 0;
         header.size      = ps.size();
         header.lbd       = 0;
@@ -147,7 +145,7 @@ class Clause {
         for (int i = 0; i < ps.size(); i++) 
             data[i].lit = ps[i];
 
-        if (header.has_extra && header.learnt){
+        if (header.learnt){
                 data[header.size].act = 0; 
                 data[header.size+1].touched = 0;
         }
@@ -156,10 +154,9 @@ class Clause {
 public:
 
     int          size        ()      const   { return header.size; }
-    void         shrink      (int i)         { assert(i <= size()); if (header.has_extra) data[header.size-i] = data[header.size]; header.size -= i; }
+    void         shrink      (int i)         { assert(i <= size()); if (header.learnt) data[header.size-i] = data[header.size]; header.size -= i; }
     void         pop         ()              { shrink(1); }
     bool         learnt      ()      const   { return header.learnt; }
-    bool         has_extra   ()      const   { return header.has_extra; }
     uint32_t     mark        ()      const   { return header.mark; }
     void         mark        (uint32_t m)    { header.mark = m; }
     const Lit&   last        ()      const   { return data[header.size-1].lit; }
@@ -179,8 +176,8 @@ public:
     Lit          operator [] (int i) const   { return data[i].lit; }
     operator const Lit* (void) const         { return (Lit*)data; }
 
-    uint32_t&    touched     ()              { assert(header.has_extra && header.learnt); return data[header.size+1].touched; }
-    float&       activity    ()              { assert(header.has_extra); return data[header.size].act; }
+    uint32_t&    touched     ()              { assert(header.learnt); return data[header.size+1].touched; }
+    float&       activity    ()              { assert(header.learnt); return data[header.size].act; }
 };
 
 
@@ -208,7 +205,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         int extras = learnt ? 2 : 0;
 
         CRef cid = RegionAllocator<uint32_t>::alloc(clauseWord32Size(ps.size(), extras));
-        new (lea(cid)) Clause(ps, false, learnt);
+        new (lea(cid)) Clause(ps, learnt);
 
         return cid;
     }
@@ -223,7 +220,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     void free(CRef cid)
     {
         Clause& c = operator[](cid);
-        int extras = c.learnt() ? 2 : (int)c.has_extra();
+        int extras = c.learnt() ? 2 : 0;
         RegionAllocator<uint32_t>::free(clauseWord32Size(c.size(), extras));
     }
 
