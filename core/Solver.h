@@ -25,11 +25,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #define GLUCOSE23
 //#define EXTRA_VAR_ACT_BUMP
-//#define INT_QUEUE_AVG
 
 #ifdef GLUCOSE23
   #define EXTRA_VAR_ACT_BUMP
-  #define INT_QUEUE_AVG
 #endif
 
 #include "mtl/Vec.h"
@@ -60,11 +58,7 @@ private:
     public:
         MyQueue(int sz) : max_sz(sz), q_sz(0), ptr(0), sum(0) { assert(sz > 0); q.growTo(sz); }
         inline bool   full () const { return q_sz == max_sz; }
-#ifdef INT_QUEUE_AVG
         inline T      avg  () const { assert(full()); return sum / max_sz; }
-#else
-        inline double avg  () const { assert(full()); return sum / (double) max_sz; }
-#endif
         inline void   clear()       { sum = 0; q_sz = 0; ptr = 0; }
         void push(T e) {
             if (q_sz < max_sz) q_sz++;
