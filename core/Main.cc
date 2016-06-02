@@ -153,7 +153,7 @@ int main(int argc, char** argv)
             exit(20);
         }
 
-        lbool ret = S.solveLimited();
+        Bool ret = S.solveLimited();
         if (S.verbosity > 0){
             printStats(S);
             printf("\n"); }

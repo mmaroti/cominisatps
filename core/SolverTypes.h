@@ -68,47 +68,6 @@ inline  int  toInt     (Lit p)              { return p.x; }
 static const Lit lit_Undef = { -2 };  // }- Useful special constants.
 static const Lit lit_Error = { -1 };  // }
 
-//=================================================================================================
-// Lifted booleans:
-
-class lbool {
-    int8_t value;
-
-public:
-    explicit lbool(int8_t x) : value(x) { }
-
-    lbool() : value(0) { }
-
-    explicit lbool(bool x) : value(x ? (int8_t) 1 : (int8_t) -1) { }
-
-    lbool operator ^ (bool b) const {
-        return lbool(b ? (int8_t) -value : value);
-    }
-
-    lbool operator && (lbool b) const {
-        return lbool(value <= b.value ? value : b.value);
-    }
-
-    lbool operator || (lbool b) const {
-        return lbool(value >= b.value ? value : b.value);
-    }
-
-    bool isTrue() const {
-        return value > 0;
-    }
-
-    bool isFalse() const {
-        return value < 0;
-    }
-
-    bool isUndef() const {
-        return value == 0;
-    }
-};
-
-static const lbool l_True = lbool((int8_t) 1);
-static const lbool l_False = lbool((int8_t) -1);
-static const lbool l_Undef = lbool((int8_t) 0);
 
 //=================================================================================================
 // Clause -- a simple class for representing a clause:

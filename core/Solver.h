@@ -36,6 +36,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Queue.h"
 #include "utils/Options.h"
 #include "core/SolverTypes.h"
+#include "core/Bool.h"
 
 
 // Don't change the actual numbers.
@@ -71,7 +72,7 @@ public:
     // Solving:
     //
     bool    simplify     ();                        // Removes already satisfied clauses.
-    lbool   solveLimited ();                        // Search for a model (With resource constraints).
+    Bool   solveLimited ();                        // Search for a model (With resource constraints).
     bool    solve        ();                        // Search without assumptions.
     bool    okay         () const;                  // FALSE means solver is in a conflicting state
 
@@ -82,10 +83,10 @@ public:
 
     // Read state:
     //
-    lbool   value      (Var x) const;       // The current value of a variable.
-    lbool   value      (Lit p) const;       // The current value of a literal.
-    lbool   modelValue (Var x) const;       // The value of a variable in the last model. The last call to solve must have been satisfiable.
-    lbool   modelValue (Lit p) const;       // The value of a literal in the last model. The last call to solve must have been satisfiable.
+    Bool   value      (Var x) const;       // The current value of a variable.
+    Bool   value      (Lit p) const;       // The current value of a literal.
+    Bool   modelValue (Var x) const;       // The value of a variable in the last model. The last call to solve must have been satisfiable.
+    Bool   modelValue (Lit p) const;       // The value of a literal in the last model. The last call to solve must have been satisfiable.
     int     nAssigns   ()      const;       // The current number of assigned literals.
     int     nClauses   ()      const;       // The current number of original clauses.
     int     nLearnts   ()      const;       // The current number of learnt clauses.
@@ -100,7 +101,7 @@ public:
 
     // Extra results: (read-only member variable)
     //
-    vec<lbool> model;             // If problem is satisfiable, this vector contains the model (if any).
+    vec<Bool> model;             // If problem is satisfiable, this vector contains the model (if any).
     vec<Lit>   conflict;          // If problem is unsatisfiable (possibly under assumptions),
                                   // this vector represent the final conflict clause expressed in the assumptions.
 
@@ -167,7 +168,7 @@ protected:
     OccLists<Lit, vec<Watcher>, WatcherDeleted>
                         watches_bin,      // Watches for binary clauses only.
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
-    vec<lbool>          assigns;          // The current assignments.
+    vec<Bool>          assigns;          // The current assignments.
     vec<char>           polarity;         // The preferred polarity of each variable.
     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
@@ -210,8 +211,8 @@ protected:
     void     cancelUntil      (int level);                                             // Backtrack until a certain level.
     void     analyze          (CRef confl, vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);    // (bt = backtrack)
     bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
-    lbool    search           (int& nof_conflicts);                                    // Search for a given number of conflicts.
-    lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
+    Bool    search           (int& nof_conflicts);                                    // Search for a given number of conflicts.
+    Bool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.
     void     reduceDB_Tier2   ();
     void     removeSatisfied  (vec<CRef>& cs);                                         // Shrink 'cs' to contain only non-satisfied clauses.
@@ -328,10 +329,10 @@ inline void     Solver::newDecisionLevel()                      { trail_lim.push
 
 inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
 inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level(x) & 31); }
-inline lbool    Solver::value         (Var x) const   { return assigns[x]; }
-inline lbool    Solver::value         (Lit p) const   { return assigns[var(p)] ^ sign(p); }
-inline lbool    Solver::modelValue    (Var x) const   { return model[x]; }
-inline lbool    Solver::modelValue    (Lit p) const   { return model[var(p)] ^ sign(p); }
+inline Bool    Solver::value         (Var x) const   { return assigns[x]; }
+inline Bool    Solver::value         (Lit p) const   { return assigns[var(p)] ^ sign(p); }
+inline Bool    Solver::modelValue    (Var x) const   { return model[x]; }
+inline Bool    Solver::modelValue    (Lit p) const   { return model[var(p)] ^ sign(p); }
 inline int      Solver::nAssigns      ()      const   { return trail.size(); }
 inline int      Solver::nClauses      ()      const   { return clauses.size(); }
 inline int      Solver::nLearnts      ()      const   { return learnts_core.size() + learnts_tier2.size() + learnts_local.size(); }
@@ -350,7 +351,7 @@ inline void     Solver::setDecisionVar(Var v, bool b)
 }
 
 inline bool     Solver::solve         () { return solve_().isTrue(); }
-inline lbool    Solver::solveLimited  () { return solve_(); }
+inline Bool    Solver::solveLimited  () { return solve_(); }
 inline bool     Solver::okay          ()      const   { return ok; }
 
 //=================================================================================================

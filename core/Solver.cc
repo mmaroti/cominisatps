@@ -108,7 +108,7 @@ Var Solver::newVar(bool sign, bool dvar)
     watches_bin.init(mkLit(v, true ));
     watches  .init(mkLit(v, false));
     watches  .init(mkLit(v, true ));
-    assigns  .push(l_Undef);
+    assigns  .push(UNDEF);
     vardata  .push(mkVarData(CRef_Undef, 0));
     activity_no_r  .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
     activity_glue_r.push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
@@ -202,7 +202,7 @@ void Solver::cancelUntil(int level) {
     if (decisionLevel() > level){
         for (int c = trail.size()-1; c >= trail_lim[level]; c--){
             Var      x  = var(trail[c]);
-            assigns [x] = l_Undef;
+            assigns [x] = UNDEF;
             if (phase_saving > 1 || ((phase_saving == 1) && c > trail_lim.last()))
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
@@ -456,7 +456,7 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
 void Solver::uncheckedEnqueue(Lit p, CRef from)
 {
     assert(value(p).isUndef());
-    assigns[var(p)] = lbool(!sign(p));
+    assigns[var(p)] = Bool(!sign(p));
     vardata[var(p)] = mkVarData(from, decisionLevel());
     trail.push_(p);
 }
@@ -684,17 +684,17 @@ bool Solver::simplify()
 
 /*_________________________________________________________________________________________________
 |
-|  search : (nof_conflicts : int) (params : const SearchParams&)  ->  [lbool]
+|  search : (nof_conflicts : int) (params : const SearchParams&)  ->  [Bool]
 |
 |  Description:
 |    Search for a model the specified number of conflicts.
 |
 |  Output:
-|    'l_True' if a partial assigment that is consistent with respect to the clauseset is found. If
-|    all variables are decision variables, this means that the clause set is satisfiable. 'l_False'
-|    if the clause set is unsatisfiable. 'l_Undef' if the bound on number of conflicts is reached.
+|    'Bool::True' if a partial assigment that is consistent with respect to the clauseset is found. If
+|    all variables are decision variables, this means that the clause set is satisfiable. 'Bool::FALSE'
+|    if the clause set is unsatisfiable. 'Bool::UNDEF' if the bound on number of conflicts is reached.
 |________________________________________________________________________________________________@*/
-lbool Solver::search(int& nof_conflicts)
+Bool Solver::search(int& nof_conflicts)
 {
     assert(ok);
     int         backtrack_level;
@@ -709,7 +709,7 @@ lbool Solver::search(int& nof_conflicts)
             // CONFLICT
             conflicts++; nof_conflicts--;
             if (conflicts == 100000 && learnts_core.size() < 100) core_lbd_cut = 5;
-            if (decisionLevel() == 0) return l_False;
+            if (decisionLevel() == 0) return FALSE;
 
             learnt_clause.clear();
             analyze(confl, learnt_clause, backtrack_level, lbd);
@@ -756,11 +756,11 @@ lbool Solver::search(int& nof_conflicts)
             if (restart){
                 lbd_queue.clear();
                 cancelUntil(0);
-                return l_Undef; }
+                return UNDEF; }
 
             // Simplify the set of problem clauses:
             if (decisionLevel() == 0 && !simplify())
-                return l_False;
+                return FALSE;
 
             if (conflicts >= next_T2_reduce){
                 next_T2_reduce = conflicts + 10000;
@@ -774,7 +774,7 @@ lbool Solver::search(int& nof_conflicts)
 
             if (next == lit_Undef)
                 // Model found:
-                return l_True;
+                return TRUE;
 
             // Increase decision level and enqueue 'next'
             newDecisionLevel();
@@ -783,15 +783,15 @@ lbool Solver::search(int& nof_conflicts)
     }
 }
 
-lbool Solver::solve_()
+Bool Solver::solve_()
 {
     model.clear();
     conflict.clear();
-    if (!ok) return l_False;
+    if (!ok) return FALSE;
 
     solves++;
 
-    lbool status = l_Undef;
+    Bool status = UNDEF;
 
     if (verbosity >= 1){
         printf("c ============================[ Search Statistics ]==============================\n");
