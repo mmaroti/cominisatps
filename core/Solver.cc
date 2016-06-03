@@ -73,8 +73,8 @@ Solver::Solver() :
   , cla_inc            (1)
   , var_inc_no_r       (1)
   , var_inc_glue_r     (1)
-  , watches_bin        (WatcherDeleted(ca))
-  , watches            (WatcherDeleted(ca))
+  , watches_bin        (ca)
+  , watches            (ca)
   , qhead              (0)
   , simpDB_assigns     (-1)
   , simpDB_props       (0)
@@ -153,7 +153,7 @@ bool Solver::addClause_(vec<Literal>& ps) {
 void Solver::attachClause(CRef cr) {
     const Clause& c = ca[cr];
     assert(c.size() > 1);
-    OccLists<vec<Watcher>, WatcherDeleted>& ws = c.size() == 2 ? watches_bin : watches;
+    OccLists& ws = c.size() == 2 ? watches_bin : watches;
     ws[~c[0]].push(Watcher(cr, c[1]));
     ws[~c[1]].push(Watcher(cr, c[0]));
     if (c.learnt()) learnts_literals += c.size();
@@ -163,7 +163,7 @@ void Solver::attachClause(CRef cr) {
 void Solver::detachClause(CRef cr, bool strict) {
     const Clause& c = ca[cr];
     assert(c.size() > 1);
-    OccLists<vec<Watcher>, WatcherDeleted>& ws = c.size() == 2 ? watches_bin : watches;
+    OccLists& ws = c.size() == 2 ? watches_bin : watches;
 
     if (strict){
         remove(ws[~c[0]], Watcher(cr, c[1]));

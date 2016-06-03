@@ -181,13 +181,6 @@ struct Watcher {
     bool operator!=(const Watcher& w) const { return cref != w.cref; }
 };
 
-struct WatcherDeleted
-{
-    const ClauseAllocator& ca;
-    WatcherDeleted(const ClauseAllocator& _ca) : ca(_ca) {}
-    bool operator()(const Watcher& w) const { return ca[w.cref].mark() == 1; }
-};
-
 struct VarOrderLt {
     const vec<double>&  activity;
     bool operator () (Var x, Var y) const { return activity[x] > activity[y]; }
@@ -197,24 +190,27 @@ struct VarOrderLt {
 //=================================================================================================
 // OccLists -- a class for maintaining occurence lists with lazy deletion:
 
-template<class Vec, class Deleted>
 class OccLists {
-	vec<Vec> occs;
+	vec<vec<Watcher>> occs;
 	vec<char> dirty;
 	vec<Literal> dirties;
-	Deleted deleted;
+	const ClauseAllocator& ca;
 
-public:
-	OccLists(const Deleted& d) :
-			deleted(d) {
+	bool isDeleted(const Watcher& w) {
+		return ca[w.cref].mark() == 1;
 	}
 
-	void init(const Literal& lit) {
+public:
+	OccLists(const ClauseAllocator& ca) :
+			ca(ca) {
+	}
+
+	void init(Literal lit) {
 		occs.growTo(lit.toInt() + 1);
 		dirty.growTo(lit.toInt() + 1, 0);
 	}
 
-	Vec& operator[](const Literal& lit) {
+	vec<Watcher>& operator[](Literal lit) {
 		return occs[lit.toInt()];
 	}
 
@@ -224,27 +220,21 @@ public:
 		dirties.clear();
 	}
 
-	void clean(const Literal& lit) {
-		Vec& vec = occs[lit.toInt()];
+	void clean(Literal lit) {
+		vec<Watcher>& vec = occs[lit.toInt()];
 		int i, j;
 		for (i = j = 0; i < vec.size(); i++)
-			if (!deleted(vec[i]))
+			if (!isDeleted(vec[i]))
 				vec[j++] = vec[i];
 		vec.shrink(i - j);
 		dirty[lit.toInt()] = 0;
 	}
 
-	void smudge(const Literal& lit) {
+	void smudge(Literal lit) {
 		if (dirty[lit.toInt()] == 0) {
 			dirty[lit.toInt()] = 1;
 			dirties.push(lit);
 		}
-	}
-
-	void clear(bool free = true) {
-		occs.clear(free);
-		dirty.clear(free);
-		dirties.clear(free);
 	}
 };
 
