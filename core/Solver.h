@@ -61,12 +61,12 @@ public:
     //
     Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
 
-    bool    addClause (const vec<Lit>& ps);                     // Add a clause to the solver. 
+    bool    addClause (const vec<Literal>& ps);                     // Add a clause to the solver. 
     bool    addEmptyClause();                                   // Add the empty clause, making the solver contradictory.
-    bool    addClause (Lit p);                                  // Add a unit clause to the solver. 
-    bool    addClause (Lit p, Lit q);                           // Add a binary clause to the solver. 
-    bool    addClause (Lit p, Lit q, Lit r);                    // Add a ternary clause to the solver. 
-    bool    addClause_(      vec<Lit>& ps);                     // Add a clause to the solver without making superflous internal copy. Will
+    bool    addClause (Literal p);                                  // Add a unit clause to the solver. 
+    bool    addClause (Literal p, Literal q);                           // Add a binary clause to the solver. 
+    bool    addClause (Literal p, Literal q, Literal r);                    // Add a ternary clause to the solver. 
+    bool    addClause_(      vec<Literal>& ps);                     // Add a clause to the solver without making superflous internal copy. Will
                                                                 // change the passed vector 'ps'.
 
     // Solving:
@@ -84,9 +84,9 @@ public:
     // Read state:
     //
     Bool   value      (Var x) const;       // The current value of a variable.
-    Bool   value      (Lit p) const;       // The current value of a literal.
+    Bool   value      (Literal p) const;       // The current value of a literal.
     Bool   modelValue (Var x) const;       // The value of a variable in the last model. The last call to solve must have been satisfiable.
-    Bool   modelValue (Lit p) const;       // The value of a literal in the last model. The last call to solve must have been satisfiable.
+    Bool   modelValue (Literal p) const;       // The value of a literal in the last model. The last call to solve must have been satisfiable.
     int     nAssigns   ()      const;       // The current number of assigned literals.
     int     nClauses   ()      const;       // The current number of original clauses.
     int     nLearnts   ()      const;       // The current number of learnt clauses.
@@ -102,7 +102,7 @@ public:
     // Extra results: (read-only member variable)
     //
     vec<Bool> model;             // If problem is satisfiable, this vector contains the model (if any).
-    vec<Lit>   conflict;          // If problem is unsatisfiable (possibly under assumptions),
+    vec<Literal>   conflict;          // If problem is unsatisfiable (possibly under assumptions),
                                   // this vector represent the final conflict clause expressed in the assumptions.
 
     // Mode of operation:
@@ -132,8 +132,8 @@ protected:
 
     struct Watcher {
         CRef cref;
-        Lit  blocker;
-        Watcher(CRef cr, Lit p) : cref(cr), blocker(p) {}
+        Literal  blocker;
+        Watcher(CRef cr, Literal p) : cref(cr), blocker(p) {}
         bool operator==(const Watcher& w) const { return cref == w.cref; }
         bool operator!=(const Watcher& w) const { return cref != w.cref; }
     };
@@ -165,13 +165,13 @@ protected:
                         activity_glue_r;
     double              var_inc_no_r,     // Amount to bump next variable with.
                         var_inc_glue_r;
-    OccLists<Lit, vec<Watcher>, WatcherDeleted>
+    OccLists<Literal, vec<Watcher>, WatcherDeleted>
                         watches_bin,      // Watches for binary clauses only.
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
     vec<Bool>          assigns;          // The current assignments.
     vec<char>           polarity;         // The preferred polarity of each variable.
     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
-    vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
+    vec<Literal>            trail;            // Assignment stack; stores all assigments made in the order they were made.
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
     vec<VarData>        vardata;          // Stores reason and level for each variable.
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
@@ -194,9 +194,9 @@ protected:
     // used, exept 'seen' wich is used in several places.
     //
     vec<char>           seen;
-    vec<Lit>            analyze_stack;
-    vec<Lit>            analyze_toclear;
-    vec<Lit>            add_tmp;
+    vec<Literal>            analyze_stack;
+    vec<Literal>            analyze_toclear;
+    vec<Literal>            add_tmp;
 
     vec<uint64_t>       seen2;    // Mostly for efficient LBD computation. 'seen2[i]' will indicate if decision level or variable 'i' has been seen.
     uint64_t            counter;  // Simple counter for marking purpose with 'seen2'.
@@ -204,20 +204,20 @@ protected:
     // Main internal methods:
     //
     void     insertVarOrder   (Var x);                                                 // Insert a variable in the decision order priority queue.
-    Lit      pickBranchLit    ();                                                      // Return the next decision variable.
+    Literal      pickBranchLit    ();                                                      // Return the next decision variable.
     void     newDecisionLevel ();                                                      // Begins a new decision level.
-    void     uncheckedEnqueue (Lit p, CRef from = CRef_Undef);                         // Enqueue a literal. Assumes value of literal is undefined.
+    void     uncheckedEnqueue (Literal p, CRef from = CRef_Undef);                         // Enqueue a literal. Assumes value of literal is undefined.
     CRef     propagate        ();                                                      // Perform unit propagation. Returns possibly conflicting clause.
     void     cancelUntil      (int level);                                             // Backtrack until a certain level.
-    void     analyze          (CRef confl, vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);    // (bt = backtrack)
-    bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
+    void     analyze          (CRef confl, vec<Literal>& out_learnt, int& out_btlevel, int& out_lbd);    // (bt = backtrack)
+    bool     litRedundant     (Literal p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
     Bool    search           (int& nof_conflicts);                                    // Search for a given number of conflicts.
     Bool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.
     void     reduceDB_Tier2   ();
     void     removeSatisfied  (vec<CRef>& cs);                                         // Shrink 'cs' to contain only non-satisfied clauses.
     void     rebuildOrderHeap ();
-    bool     binResMinimize   (vec<Lit>& out_learnt);                                  // Further learnt clause minimization by binary resolution.
+    bool     binResMinimize   (vec<Literal>& out_learnt);                                  // Further learnt clause minimization by binary resolution.
     void     cleanLearnts     (vec<CRef>& learnts, unsigned valid_mark);
 
     // Maintaining Variable/Clause activity:
@@ -249,7 +249,7 @@ protected:
 
         counter++;
         for (int i = 0; i < c.size(); i++){
-            int l = level(var(c[i]));
+            int l = level(c[i].var());
             if (l != 0 && seen2[l] != counter){
                 seen2[l] = counter;
                 lbd++; } }
@@ -316,23 +316,23 @@ inline void Solver::checkGarbage(double gf){
     if (ca.wasted() > ca.size() * gf)
         garbageCollect(); }
 
-inline bool     Solver::addClause       (const vec<Lit>& ps)    { ps.copyTo(add_tmp); return addClause_(add_tmp); }
+inline bool     Solver::addClause       (const vec<Literal>& ps)    { ps.copyTo(add_tmp); return addClause_(add_tmp); }
 inline bool     Solver::addEmptyClause  ()                      { add_tmp.clear(); return addClause_(add_tmp); }
-inline bool     Solver::addClause       (Lit p)                 { add_tmp.clear(); add_tmp.push(p); return addClause_(add_tmp); }
-inline bool     Solver::addClause       (Lit p, Lit q)          { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
-inline bool     Solver::addClause       (Lit p, Lit q, Lit r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
+inline bool     Solver::addClause       (Literal p)                 { add_tmp.clear(); add_tmp.push(p); return addClause_(add_tmp); }
+inline bool     Solver::addClause       (Literal p, Literal q)          { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
+inline bool     Solver::addClause       (Literal p, Literal q, Literal r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
 inline bool     Solver::locked          (const Clause& c) const {
     int i = c.size() != 2 ? 0 : (value(c[0]).isTrue() ? 0 : 1);
-    return value(c[i]).isTrue() && reason(var(c[i])) != CRef_Undef && ca.lea(reason(var(c[i]))) == &c;
+    return value(c[i]).isTrue() && reason(c[i].var()) != CRef_Undef && ca.lea(reason(c[i].var())) == &c;
 }
 inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size()); }
 
 inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
 inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level(x) & 31); }
 inline Bool    Solver::value         (Var x) const   { return assigns[x]; }
-inline Bool    Solver::value         (Lit p) const   { return assigns[var(p)] ^ sign(p); }
+inline Bool    Solver::value         (Literal p) const   { return assigns[p.var()] ^ p.sign(); }
 inline Bool    Solver::modelValue    (Var x) const   { return model[x]; }
-inline Bool    Solver::modelValue    (Lit p) const   { return model[var(p)] ^ sign(p); }
+inline Bool    Solver::modelValue    (Literal p) const   { return model[p.var()] ^ p.sign(); }
 inline int      Solver::nAssigns      ()      const   { return trail.size(); }
 inline int      Solver::nClauses      ()      const   { return clauses.size(); }
 inline int      Solver::nLearnts      ()      const   { return learnts_core.size() + learnts_tier2.size() + learnts_local.size(); }

@@ -20,60 +20,64 @@
  OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MINISAT_BOOL_H
-#define MINISAT_BOOL_H
+#ifndef MINISAT_LITERAL_H
+#define MINISAT_LITERAL_H
 
 namespace Minisat {
 
-class Bool {
-	int8_t val;
+typedef int Var;
+constexpr static Var VAR_UNDEF = { -1 };
 
-public:
-	constexpr explicit Bool(int8_t x) :
-			val(x) {
+struct Literal {
+	int x;
+
+	// Use this as a constructor:
+	friend Literal mkLit(Var var, bool sign = false);
+
+	bool operator ==(Literal p) const {
+		return x == p.x;
 	}
 
-	constexpr Bool() :
-			val(0) {
+	bool operator !=(Literal p) const {
+		return x != p.x;
 	}
 
-	constexpr explicit Bool(bool x) :
-			val(x ? (int8_t) 1 : (int8_t) -1) {
+	bool operator <(Literal p) const {
+		return x < p.x;
 	}
 
-	Bool operator ^(bool b) const {
-		return Bool(b ? (int8_t) -val : val);
+	Literal operator ~() const {
+		Literal q;
+		q.x = x ^ 1;
+		return q;
 	}
 
-	Bool operator &&(Bool b) const {
-		return Bool(val <= b.val ? val : b.val);
+	Literal operator ^(bool b) {
+		Literal q;
+		q.x = x ^ (unsigned int) b;
+		return q;
 	}
 
-	Bool operator ||(Bool b) const {
-		return Bool(val >= b.val ? val : b.val);
+	bool sign() const {
+		return x & 1;
 	}
 
-	// disable explicit equality
-	bool operator ==(Bool b) const = delete;
-
-	bool operator !=(Bool b) const = delete;
-
-	bool isTrue() const {
-		return val > 0;
-	}
-
-	bool isFalse() const {
-		return val < 0;
-	}
-
-	bool isUndef() const {
-		return val == 0;
+	int var() const {
+		return x >> 1;
 	}
 };
 
-constexpr static Bool BOOL_TRUE = Bool((int8_t) 1);
-constexpr static Bool BOOL_FALSE = Bool((int8_t) -1);
-constexpr static Bool BOOL_UNDEF = Bool((int8_t) 0);
+inline Literal mkLit(Var var, bool sign) {
+	Literal p;
+	p.x = var + var + (int) sign;
+	return p;
+}
+
+inline int toInt(Literal p) {
+	return p.x;
+}
+
+constexpr static Literal LIT_UNDEF = { -2 };
 
 }
 

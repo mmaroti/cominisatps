@@ -30,44 +30,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Vec.h"
 #include "mtl/Map.h"
 #include "mtl/Alloc.h"
+#include "core/Literal.h"
 
 namespace Minisat {
-
-//=================================================================================================
-// Variables, literals, lifted booleans, clauses:
-
-
-// NOTE! Variables are just integers. No abstraction here. They should be chosen from 0..N,
-// so that they can be used as array indices.
-
-typedef int Var;
-#define var_Undef (-1)
-
-
-struct Lit {
-    int     x;
-
-    // Use this as a constructor:
-    friend Lit mkLit(Var var, bool sign = false);
-
-    bool operator == (Lit p) const { return x == p.x; }
-    bool operator != (Lit p) const { return x != p.x; }
-    bool operator <  (Lit p) const { return x < p.x;  } // '<' makes p, ~p adjacent in the ordering.
-};
-
-inline  Lit  mkLit     (Var var, bool sign) { Lit p; p.x = var + var + (int)sign; return p; }
-inline  Lit  operator ~(Lit p)              { Lit q; q.x = p.x ^ 1; return q; }
-inline  Lit  operator ^(Lit p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
-inline  bool sign      (Lit p)              { return p.x & 1; }
-inline  int  var       (Lit p)              { return p.x >> 1; }
-
-// Mapping Literals to and from compact integers suitable for array indexing:
-inline  int  toInt     (Var v)              { return v; } 
-inline  int  toInt     (Lit p)              { return p.x; } 
-
-static const Lit lit_Undef = { -2 };  // }- Useful special constants.
-static const Lit lit_Error = { -1 };  // }
-
 
 //=================================================================================================
 // Clause -- a simple class for representing a clause:
@@ -84,7 +49,7 @@ class Clause {
         unsigned lbd       : 27;
         uint32_t size;
     } header;
-    union { Lit lit; float act; uint32_t touched; CRef rel; } data[0];
+    union { Literal lit; float act; uint32_t touched; CRef rel; } data[0];
 
     friend class ClauseAllocator;
 
@@ -115,7 +80,7 @@ public:
     bool         learnt      ()      const   { return header.learnt; }
     uint32_t     mark        ()      const   { return header.mark; }
     void         mark        (uint32_t m)    { header.mark = m; }
-    const Lit&   last        ()      const   { return data[header.size-1].lit; }
+    const Literal&   last        ()      const   { return data[header.size-1].lit; }
 
     bool         reloced     ()      const   { return header.reloced; }
     CRef         relocation  ()      const   { return data[0].rel; }
@@ -128,9 +93,9 @@ public:
 
     // NOTE: somewhat unsafe to change the clause in-place! Must manually call 'calcAbstraction' afterwards for
     //       subsumption operations to behave correctly.
-    Lit&         operator [] (int i)         { return data[i].lit; }
-    Lit          operator [] (int i) const   { return data[i].lit; }
-    operator const Lit* (void) const         { return (Lit*)data; }
+    Literal&         operator [] (int i)         { return data[i].lit; }
+    Literal          operator [] (int i) const   { return data[i].lit; }
+    operator const Literal* (void) const         { return (Literal*)data; }
 
     uint32_t&    touched     ()              { assert(header.learnt); return data[header.size+1].touched; }
     float&       activity    ()              { assert(header.learnt); return data[header.size].act; }
@@ -145,7 +110,7 @@ const CRef CRef_Undef = RegionAllocator<uint32_t>::Ref_Undef;
 class ClauseAllocator : public RegionAllocator<uint32_t>
 {
     static int clauseWord32Size(int size, int extras){
-        return (sizeof(Clause) + (sizeof(Lit) * (size + extras))) / sizeof(uint32_t); }
+        return (sizeof(Clause) + (sizeof(Literal) * (size + extras))) / sizeof(uint32_t); }
  public:
     ClauseAllocator(uint32_t start_cap) : RegionAllocator<uint32_t>(start_cap) {}
     ClauseAllocator() {}
@@ -156,7 +121,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     template<class Lits>
     CRef alloc(const Lits& ps, bool learnt = false)
     {
-        assert(sizeof(Lit)      == sizeof(uint32_t));
+        assert(sizeof(Literal)      == sizeof(uint32_t));
         assert(sizeof(float)    == sizeof(uint32_t));
         int extras = learnt ? 2 : 0;
 
