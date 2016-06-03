@@ -139,7 +139,7 @@ protected:
                         activity_glue_r;
     double              var_inc_no_r,     // Amount to bump next variable with.
                         var_inc_glue_r;
-    OccLists<Literal, vec<Watcher>, WatcherDeleted>
+    OccLists<vec<Watcher>, WatcherDeleted>
                         watches_bin,      // Watches for binary clauses only.
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
     vec<Bool>          assigns;          // The current assignments.

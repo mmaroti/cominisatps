@@ -166,61 +166,6 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     }
 };
 
-
-//=================================================================================================
-// OccLists -- a class for maintaining occurence lists with lazy deletion:
-
-template<class Idx, class Vec, class Deleted>
-class OccLists {
-	vec<Vec> occs;
-	vec<char> dirty;
-	vec<Idx> dirties;
-	Deleted deleted;
-
-public:
-	OccLists(const Deleted& d) :
-			deleted(d) {
-	}
-
-	void init(const Idx& idx) {
-		occs.growTo(idx.toInt() + 1);
-		dirty.growTo(idx.toInt() + 1, 0);
-	}
-
-	Vec& operator[](const Idx& idx) {
-		return occs[idx.toInt()];
-	}
-
-	void cleanAll() {
-		for (int i = 0; i < dirties.size(); i++)
-			clean(dirties[i]);
-		dirties.clear();
-	}
-
-	void clean(const Idx& idx) {
-		Vec& vec = occs[idx.toInt()];
-		int i, j;
-		for (i = j = 0; i < vec.size(); i++)
-			if (!deleted(vec[i]))
-				vec[j++] = vec[i];
-		vec.shrink(i - j);
-		dirty[idx.toInt()] = 0;
-	}
-
-	void smudge(const Idx& idx) {
-		if (dirty[idx.toInt()] == 0) {
-			dirty[idx.toInt()] = 1;
-			dirties.push(idx);
-		}
-	}
-
-	void clear(bool free = true) {
-		occs.clear(free);
-		dirty.clear(free);
-		dirties.clear(free);
-	}
-};
-
 //=================================================================================================
 
 // Helper structures:
@@ -247,6 +192,60 @@ struct VarOrderLt {
     const vec<double>&  activity;
     bool operator () (Var x, Var y) const { return activity[x] > activity[y]; }
     VarOrderLt(const vec<double>&  act) : activity(act) { }
+};
+
+//=================================================================================================
+// OccLists -- a class for maintaining occurence lists with lazy deletion:
+
+template<class Vec, class Deleted>
+class OccLists {
+	vec<Vec> occs;
+	vec<char> dirty;
+	vec<Literal> dirties;
+	Deleted deleted;
+
+public:
+	OccLists(const Deleted& d) :
+			deleted(d) {
+	}
+
+	void init(const Literal& lit) {
+		occs.growTo(lit.toInt() + 1);
+		dirty.growTo(lit.toInt() + 1, 0);
+	}
+
+	Vec& operator[](const Literal& lit) {
+		return occs[lit.toInt()];
+	}
+
+	void cleanAll() {
+		for (int i = 0; i < dirties.size(); i++)
+			clean(dirties[i]);
+		dirties.clear();
+	}
+
+	void clean(const Literal& lit) {
+		Vec& vec = occs[lit.toInt()];
+		int i, j;
+		for (i = j = 0; i < vec.size(); i++)
+			if (!deleted(vec[i]))
+				vec[j++] = vec[i];
+		vec.shrink(i - j);
+		dirty[lit.toInt()] = 0;
+	}
+
+	void smudge(const Literal& lit) {
+		if (dirty[lit.toInt()] == 0) {
+			dirty[lit.toInt()] = 1;
+			dirties.push(lit);
+		}
+	}
+
+	void clear(bool free = true) {
+		occs.clear(free);
+		dirty.clear(free);
+		dirties.clear(free);
+	}
 };
 
 }
