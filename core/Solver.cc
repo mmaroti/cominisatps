@@ -104,10 +104,10 @@ Solver::~Solver() {
 Var Solver::newVar(bool sign, bool dvar)
 {
     int v = nVars();
-    watches_bin.init(mkLit(v, false));
-    watches_bin.init(mkLit(v, true ));
-    watches  .init(mkLit(v, false));
-    watches  .init(mkLit(v, true ));
+    watches_bin.init(Literal(v, false));
+    watches_bin.init(Literal(v, true ));
+    watches  .init(Literal(v, false));
+    watches  .init(Literal(v, true ));
     assigns  .push(BOOL_UNDEF);
     vardata  .push(mkVarData(CRef_Undef, 0));
     activity_no_r  .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
@@ -227,7 +227,7 @@ Literal Solver::pickBranchLit()
         else
             next = order_heap.removeMin();
 
-    return mkLit(next, polarity[next]);
+    return Literal(next, polarity[next]);
 }
 
 /*_________________________________________________________________________________________________
@@ -852,7 +852,7 @@ void Solver::relocAll(ClauseAllocator& to)
 	watches.cleanAll();
     for (int v = 0; v < nVars(); v++)
         for (int s = 0; s < 2; s++){
-            Literal p = mkLit(v, s);
+            Literal p = Literal(v, s);
 
             vec<Watcher>& ws_bin = watches_bin[p];
             for (int j = 0; j < ws_bin.size(); j++)

@@ -28,11 +28,21 @@ namespace Minisat {
 typedef int Var;
 constexpr static Var VAR_UNDEF = { -1 };
 
-struct Literal {
+class Literal {
 	int x;
 
-	// Use this as a constructor:
-	friend Literal mkLit(Var var, bool sign = false);
+	Literal(int x) :
+			x(x) {
+	}
+
+public:
+	constexpr Literal() :
+			x(-2) {
+	}
+
+	constexpr Literal(Var var, bool sign) :
+			x(var + var + (unsigned int) sign) {
+	}
 
 	bool operator ==(Literal p) const {
 		return x == p.x;
@@ -47,15 +57,11 @@ struct Literal {
 	}
 
 	Literal operator ~() const {
-		Literal q;
-		q.x = x ^ 1;
-		return q;
+		return Literal(x ^ 1);
 	}
 
 	Literal operator ^(bool b) {
-		Literal q;
-		q.x = x ^ (unsigned int) b;
-		return q;
+		return Literal(x ^ (unsigned int) b);
 	}
 
 	bool sign() const {
@@ -65,19 +71,13 @@ struct Literal {
 	int var() const {
 		return x >> 1;
 	}
+
+	int toInt() const {
+		return x;
+	}
 };
 
-inline Literal mkLit(Var var, bool sign) {
-	Literal p;
-	p.x = var + var + (int) sign;
-	return p;
-}
-
-inline int toInt(Literal p) {
-	return p.x;
-}
-
-constexpr static Literal LIT_UNDEF = { -2 };
+constexpr static Literal LIT_UNDEF = Literal();
 
 }
 

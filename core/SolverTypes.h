@@ -183,12 +183,12 @@ public:
 	}
 
 	void init(const Idx& idx) {
-		occs.growTo(toInt(idx) + 1);
-		dirty.growTo(toInt(idx) + 1, 0);
+		occs.growTo(idx.toInt() + 1);
+		dirty.growTo(idx.toInt() + 1, 0);
 	}
 
 	Vec& operator[](const Idx& idx) {
-		return occs[toInt(idx)];
+		return occs[idx.toInt()];
 	}
 
 	void cleanAll() {
@@ -198,18 +198,18 @@ public:
 	}
 
 	void clean(const Idx& idx) {
-		Vec& vec = occs[toInt(idx)];
+		Vec& vec = occs[idx.toInt()];
 		int i, j;
 		for (i = j = 0; i < vec.size(); i++)
 			if (!deleted(vec[i]))
 				vec[j++] = vec[i];
 		vec.shrink(i - j);
-		dirty[toInt(idx)] = 0;
+		dirty[idx.toInt()] = 0;
 	}
 
 	void smudge(const Idx& idx) {
-		if (dirty[toInt(idx)] == 0) {
-			dirty[toInt(idx)] = 1;
+		if (dirty[idx.toInt()] == 0) {
+			dirty[idx.toInt()] = 1;
 			dirties.push(idx);
 		}
 	}
