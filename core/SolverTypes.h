@@ -222,6 +222,33 @@ public:
 };
 
 //=================================================================================================
+
+// Helper structures:
+//
+struct VarData { CRef reason; int level; };
+static inline VarData mkVarData(CRef cr, int l){ VarData d = {cr, l}; return d; }
+
+struct Watcher {
+    CRef cref;
+    Literal  blocker;
+    Watcher(CRef cr, Literal p) : cref(cr), blocker(p) {}
+    bool operator==(const Watcher& w) const { return cref == w.cref; }
+    bool operator!=(const Watcher& w) const { return cref != w.cref; }
+};
+
+struct WatcherDeleted
+{
+    const ClauseAllocator& ca;
+    WatcherDeleted(const ClauseAllocator& _ca) : ca(_ca) {}
+    bool operator()(const Watcher& w) const { return ca[w.cref].mark() == 1; }
+};
+
+struct VarOrderLt {
+    const vec<double>&  activity;
+    bool operator () (Var x, Var y) const { return activity[x] > activity[y]; }
+    VarOrderLt(const vec<double>&  act) : activity(act) { }
+};
+
 }
 
 #endif
