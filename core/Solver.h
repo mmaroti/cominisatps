@@ -35,8 +35,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Alg.h"
 #include "mtl/Queue.h"
 #include "utils/Options.h"
-#include "core/SolverTypes.h"
-#include "core/Bool.h"
+#include "SolverTypes.h"
+#include "Bool.h"
+#include "Values.h"
 
 
 // Don't change the actual numbers.
@@ -83,8 +84,6 @@ public:
 
     // Read state:
     //
-    Bool   value      (Var x) const;       // The current value of a variable.
-    Bool   value      (Literal p) const;       // The current value of a literal.
     Bool   modelValue (Var x) const;       // The value of a variable in the last model. The last call to solve must have been satisfiable.
     Bool   modelValue (Literal p) const;       // The value of a literal in the last model. The last call to solve must have been satisfiable.
     int     nAssigns   ()      const;       // The current number of assigned literals.
@@ -141,10 +140,10 @@ protected:
                         var_inc_glue_r;
     OccLists            watches_bin,      // Watches for binary clauses only.
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
-    vec<Bool>           assigns;          // The current assignments.
+    Values			    values;			  // the current assignments
     vec<char>           polarity;         // The preferred polarity of each variable.
     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
-    vec<Literal>        trail;            // Assignment stack; stores all assigments made in the order they were made.
+    vec<Literal>        trail;            // Assignment stack; stores all assignments made in the order they were made.
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
     vec<VarData>        vardata;          // Stores reason and level for each variable.
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
@@ -295,15 +294,13 @@ inline bool     Solver::addClause       (Literal p)                 { add_tmp.cl
 inline bool     Solver::addClause       (Literal p, Literal q)          { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
 inline bool     Solver::addClause       (Literal p, Literal q, Literal r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
 inline bool     Solver::locked          (const Clause& c) const {
-    int i = c.size() != 2 ? 0 : (value(c[0]).isTrue() ? 0 : 1);
-    return value(c[i]).isTrue() && reason(c[i].var()) != CRef_Undef && ca.lea(reason(c[i].var())) == &c;
+    int i = c.size() != 2 ? 0 : (values.isTrue(c[0]) ? 0 : 1);
+    return values.isTrue(c[i]) && reason(c[i].var()) != CRef_Undef && ca.lea(reason(c[i].var())) == &c;
 }
 inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size()); }
 
 inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
 inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level(x) & 31); }
-inline Bool    Solver::value         (Var x) const   { return assigns[x]; }
-inline Bool    Solver::value         (Literal p) const   { return assigns[p.var()] ^ p.sign(); }
 inline Bool    Solver::modelValue    (Var x) const   { return model[x]; }
 inline Bool    Solver::modelValue    (Literal p) const   { return model[p.var()] ^ p.sign(); }
 inline int      Solver::nAssigns      ()      const   { return trail.size(); }

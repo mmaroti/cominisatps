@@ -20,64 +20,55 @@
  OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MINISAT_LITERAL_H
-#define MINISAT_LITERAL_H
+#ifndef MINISAT_VALUES_H
+#define MINISAT_VALUES_H
+
+#include "Bool.h"
+#include "Literal.h"
+#include "mtl/Vec.h"
 
 namespace Minisat {
 
-typedef int Var;
-constexpr static Var VAR_UNDEF = { -1 };
-
-class Literal {
-	int x;
-
-	constexpr Literal(int x) :
-			x(x) {
-	}
+class Values {
+	vec<Bool> values;
 
 public:
-	constexpr Literal() :
-			x(-2) {
+	void addVariable() {
+		values.push(BOOL_UNDEF);
 	}
 
-	constexpr Literal(Var var, bool sign) :
-			x(var + var + (unsigned int) sign) {
+	void setUndef(Var v) {
+		values[v] = BOOL_UNDEF;
 	}
 
-	bool operator ==(Literal p) const {
-		return x == p.x;
+	void setFalse(Literal lit) {
+		values[lit.var()] = lit.sign() ? BOOL_FALSE : BOOL_TRUE;
 	}
 
-	bool operator !=(Literal p) const {
-		return x != p.x;
+	Bool getValue(Var v) const {
+		return values[v];
 	}
 
-	bool operator <(Literal p) const {
-		return x < p.x;
+	Bool getValue(Literal lit) const {
+		return values[lit.var()] ^ lit.sign();
 	}
 
-	Literal operator ~() const {
-		return Literal(x ^ 1);
+	bool isUndef(Var var) const {
+		return getValue(var).isUndef();
 	}
 
-	Literal operator ^(bool b) {
-		return Literal(x ^ (unsigned int) b);
+	bool isFalse(Literal lit) const {
+		return getValue(lit).isFalse();
 	}
 
-	bool sign() const {
-		return x & 1;
+	bool isTrue(Literal lit) const {
+		return getValue(lit).isTrue();
 	}
 
-	int var() const {
-		return x >> 1;
-	}
-
-	int toInt() const {
-		return x;
+	bool isUndef(Literal lit) const {
+		return getValue(lit).isUndef();
 	}
 };
-
-constexpr static Literal LIT_UNDEF = Literal();
 
 }
 

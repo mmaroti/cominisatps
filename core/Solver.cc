@@ -108,7 +108,7 @@ Var Solver::newVar(bool sign, bool dvar)
     watches_bin.init(Literal(v, true ));
     watches  .init(Literal(v, false));
     watches  .init(Literal(v, true ));
-    assigns  .push(BOOL_UNDEF);
+    values.addVariable();
     vardata  .push(mkVarData(CRef_Undef, 0));
     activity_no_r  .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
     activity_glue_r.push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
@@ -130,9 +130,9 @@ bool Solver::addClause_(vec<Literal>& ps) {
     sort(ps);
     Literal p; int i, j;
     for (i = j = 0, p = LIT_UNDEF; i < ps.size(); i++)
-        if (value(ps[i]).isTrue() || ps[i] == ~p)
+        if (values.isTrue(ps[i]) || ps[i] == ~p)
             return true;
-        else if (!value(ps[i]).isFalse() && ps[i] != p)
+        else if (!values.isFalse(ps[i]) && ps[i] != p)
             ps[j++] = p = ps[i];
     ps.shrink(i - j);
 
@@ -183,7 +183,7 @@ void Solver::removeClause(CRef cr) {
     detachClause(cr);
     // Don't leave pointers to free'd memory!
     if (locked(c)){
-        Literal implied = c.size() != 2 ? c[0] : (value(c[0]).isTrue() ? c[0] : c[1]);
+        Literal implied = c.size() != 2 ? c[0] : (values.isTrue(c[0]) ? c[0] : c[1]);
         vardata[implied.var()].reason = CRef_Undef; }
     c.mark(1);
     ca.free(cr);
@@ -191,7 +191,7 @@ void Solver::removeClause(CRef cr) {
 
 bool Solver::satisfied(const Clause& c) const {
     for (int i = 0; i < c.size(); i++)
-        if (value(c[i]).isTrue())
+        if (values.isTrue(c[i]))
             return true;
     return false;
 }
@@ -202,7 +202,7 @@ void Solver::cancelUntil(int level) {
     if (decisionLevel() > level){
         for (int c = trail.size()-1; c >= trail_lim[level]; c--){
             Var      x  = trail[c].var();
-            assigns [x] = BOOL_UNDEF;
+            values.setUndef(x);
             if (phase_saving > 1 || ((phase_saving == 1) && c > trail_lim.last()))
                 polarity[x] = trail[c].sign();
             insertVarOrder(x); }
@@ -221,11 +221,12 @@ Literal Solver::pickBranchLit()
     Heap<VarOrderLt>& order_heap = glucose_restart ? order_heap_glue_r : order_heap_no_r;
 
     // Activity based decision:
-    while (next == VAR_UNDEF || !value(next).isUndef() || !decision[next])
+    while (next == VAR_UNDEF || !values.isUndef(next) || !decision[next]) {
         if (order_heap.empty())
             return LIT_UNDEF;
         else
             next = order_heap.removeMin();
+    }
 
     return Literal(next, polarity[next]);
 }
@@ -263,8 +264,8 @@ void Solver::analyze(CRef confl, vec<Literal>& out_learnt, int& out_btlevel, int
         Clause& c = ca[confl];
 
         // For binary clauses, we don't rearrange literals in propagate(), so check and make sure the first is an implied lit.
-        if (p != LIT_UNDEF && c.size() == 2 && value(c[0]).isFalse()){
-            assert(value(c[1]).isTrue());
+        if (p != LIT_UNDEF && c.size() == 2 && values.isFalse(c[0])){
+            assert(values.isTrue(c[1]));
             Literal tmp = c[0];
             c[0] = c[1], c[1] = tmp; }
 
@@ -400,7 +401,7 @@ bool Solver::binResMinimize(vec<Literal>& out_learnt)
     for (int i = 0; i < ws.size(); i++){
         Literal the_other = ws[i].blocker;
         // Does 'the_other' appear negatively in 'out_learnt'?
-        if (seen2[the_other.var()] == counter && value(the_other).isTrue()){
+        if (seen2[the_other.var()] == counter && values.isTrue(the_other)){
             to_remove++;
             seen2[the_other.var()] = counter - 1; // Remember to remove this variable.
         }
@@ -428,8 +429,8 @@ bool Solver::litRedundant(Literal p, uint32_t abstract_levels)
         Clause& c = ca[reason(analyze_stack.last().var())]; analyze_stack.pop();
 
         // Special handling for binary clauses like in 'analyze()'.
-        if (c.size() == 2 && value(c[0]).isFalse()){
-            assert(value(c[1]).isTrue());
+        if (c.size() == 2 && values.isFalse(c[0])){
+            assert(values.isTrue(c[1]));
             Literal tmp = c[0];
             c[0] = c[1], c[1] = tmp; }
 
@@ -455,8 +456,8 @@ bool Solver::litRedundant(Literal p, uint32_t abstract_levels)
 
 void Solver::uncheckedEnqueue(Literal p, CRef from)
 {
-    assert(value(p).isUndef());
-    assigns[p.var()] = Bool(!p.sign());
+    assert(values.isUndef(p));
+    values.setFalse(p);
     vardata[p.var()] = mkVarData(from, decisionLevel());
     trail.push_(p);
 }
@@ -489,17 +490,17 @@ CRef Solver::propagate()
         vec<Watcher>& ws_bin = watches_bin[p];  // Propagate binary clauses first.
         for (int k = 0; k < ws_bin.size(); k++){
             Literal the_other = ws_bin[k].blocker;
-            if (value(the_other).isFalse()){
+            if (values.isFalse(the_other)){
                 confl = ws_bin[k].cref;
                 goto ExitProp;
-            }else if(value(the_other).isUndef())
+            }else if(values.isUndef(the_other))
                 uncheckedEnqueue(the_other, ws_bin[k].cref);
         }
 
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;){
             // Try to avoid inspecting the clause:
             Literal blocker = i->blocker;
-            if (value(blocker).isTrue()){
+            if (values.isTrue(blocker)){
                 *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
@@ -514,19 +515,19 @@ CRef Solver::propagate()
             // If 0th watch is true, then clause is already satisfied.
             Literal     first = c[0];
             Watcher w     = Watcher(cr, first);
-            if (first != blocker && value(first).isTrue()){
+            if (first != blocker && values.isTrue(first)){
                 *j++ = w; continue; }
 
             // Look for new watch:
             for (int k = 2; k < c.size(); k++)
-                if (!value(c[k]).isFalse()){
+                if (!values.isFalse(c[k])){
                     c[1] = c[k]; c[k] = false_lit;
                     watches[~c[1]].push(w);
                     goto NextClause; }
 
             // Did not find watch -- clause is unit under assignment:
             *j++ = w;
-            if (value(first).isFalse()){
+            if (values.isFalse(first)){
                 confl = cr;
                 qhead = trail.size();
                 // Copy the remaining watches:
@@ -628,7 +629,7 @@ void Solver::rebuildOrderHeap()
 {
     vec<Var> vs;
     for (Var v = 0; v < nVars(); v++)
-        if (decision[v] && value(v).isUndef())
+        if (decision[v] && values.isUndef(v))
             vs.push(v);
 
     order_heap_no_r  .build(vs);
@@ -833,7 +834,7 @@ Bool Solver::solve_()
     if (status.isTrue()){
         // Extend & copy model:
         model.growTo(nVars());
-        for (int i = 0; i < nVars(); i++) model[i] = value(i);
+        for (int i = 0; i < nVars(); i++) model[i] = values.getValue(i);
     }else if (status.isFalse() && conflict.size() == 0)
         ok = false;
 
