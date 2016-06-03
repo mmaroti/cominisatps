@@ -139,13 +139,12 @@ protected:
                         activity_glue_r;
     double              var_inc_no_r,     // Amount to bump next variable with.
                         var_inc_glue_r;
-    OccLists<vec<Watcher>, WatcherDeleted>
-                        watches_bin,      // Watches for binary clauses only.
+    OccLists            watches_bin,      // Watches for binary clauses only.
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
-    vec<Bool>          assigns;          // The current assignments.
+    vec<Bool>           assigns;          // The current assignments.
     vec<char>           polarity;         // The preferred polarity of each variable.
     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
-    vec<Literal>            trail;            // Assignment stack; stores all assigments made in the order they were made.
+    vec<Literal>        trail;            // Assignment stack; stores all assigments made in the order they were made.
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
     vec<VarData>        vardata;          // Stores reason and level for each variable.
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
