@@ -30,19 +30,24 @@
 namespace Minisat {
 
 class Values {
-	vec<Bool> values;
+	struct Data {
+		unsigned polarity :1; // preferred polarity for next decision
+		unsigned decision :1; // eligible for decision making
+
+		Data(bool p, bool d) :
+				polarity(p), decision(d) {
+		}
+	};
+
+	vec<Bool> values; // the current assignments of variables
+	vec<Data> data;
+	int decision_vars;	// number of decision variables
 
 public:
-	void addVariable() {
+	void addVariable(bool polarity, bool decision) {
 		values.push(BOOL_UNDEF);
-	}
-
-	void setUndef(Var v) {
-		values[v] = BOOL_UNDEF;
-	}
-
-	void setFalse(Literal lit) {
-		values[lit.var()] = lit.sign() ? BOOL_FALSE : BOOL_TRUE;
+		data.push(Data(polarity, decision));
+		decision_vars += (unsigned) decision;
 	}
 
 	Bool getValue(Var v) const {
@@ -67,6 +72,40 @@ public:
 
 	bool isUndef(Literal lit) const {
 		return getValue(lit).isUndef();
+	}
+
+	void setUndef(Var v) {
+		values[v] = BOOL_UNDEF;
+	}
+
+	void setFalse(Literal lit) {
+		values[lit.var()] = lit.sign() ? BOOL_FALSE : BOOL_TRUE;
+	}
+
+	bool getPolarity(Var var) const {
+		return data[var].polarity;
+	}
+
+	void setPolarity(Var var, bool polarity) {
+		data[var].polarity = (unsigned) polarity;
+	}
+
+	bool getDecision(Var var) const {
+		return data[var].decision;
+	}
+
+	void setDecision(Var var, bool decision) {
+		Data &d = data[var];
+
+		decision_vars -= d.decision;
+		d.decision = decision;
+		decision_vars += d.decision;
+
+		// TODO: update order heap
+	}
+
+	int getDecisionVars() const {
+		return decision_vars;
 	}
 };
 
