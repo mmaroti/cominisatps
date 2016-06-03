@@ -79,7 +79,6 @@ public:
 
     // Variable mode:
     // 
-    void    setPolarity    (Var v, bool b); // Declare which polarity the decision heuristic should use for a variable. Requires mode 'polarity_user'.
     void    setDecisionVar (Var v, bool b); // Declare if a variable should be eligible for selection in the decision heuristic.
 
     // Read state:
@@ -120,7 +119,7 @@ public:
     // Statistics: (read-only member variable)
     //
     uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts, conflicts_glue;
-    uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
+    uint64_t clauses_literals, learnts_literals, max_literals, tot_literals;
 
 protected:
 
@@ -141,8 +140,6 @@ protected:
     OccLists            watches_bin,      // Watches for binary clauses only.
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
     Values			    values;			  // the current assignments
-    vec<char>           polarity;         // The preferred polarity of each variable.
-    vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
     vec<Literal>        trail;            // Assignment stack; stores all assignments made in the order they were made.
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
     vec<VarData>        vardata;          // Stores reason and level for each variable.
@@ -253,7 +250,7 @@ inline int  Solver::level (Var x) const { return vardata[x].level; }
 
 inline void Solver::insertVarOrder(Var x) {
     Heap<VarOrderLt>& order_heap = glucose_restart ? order_heap_glue_r : order_heap_no_r;
-    if (!order_heap.inHeap(x) && decision[x]) order_heap.insert(x); }
+    if (!order_heap.inHeap(x) && values.getDecision(x)) order_heap.insert(x); }
 
 inline void Solver::varDecayActivity() {
     var_inc_glue_r *= (1 / var_decay_glue_r);
@@ -307,18 +304,7 @@ inline int      Solver::nAssigns      ()      const   { return trail.size(); }
 inline int      Solver::nClauses      ()      const   { return clauses.size(); }
 inline int      Solver::nLearnts      ()      const   { return learnts_core.size() + learnts_tier2.size() + learnts_local.size(); }
 inline int      Solver::nVars         ()      const   { return vardata.size(); }
-inline int      Solver::nFreeVars     ()      const   { return (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]); }
-inline void     Solver::setPolarity   (Var v, bool b) { polarity[v] = b; }
-inline void     Solver::setDecisionVar(Var v, bool b) 
-{ 
-    if      ( b && !decision[v]) dec_vars++;
-    else if (!b &&  decision[v]) dec_vars--;
-
-    decision[v] = b;
-    if (b && !order_heap_no_r.inHeap(v)){
-        order_heap_no_r.insert(v);
-        order_heap_glue_r.insert(v); }
-}
+inline int      Solver::nFreeVars     ()      const   { return values.getDecisionVars() - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]); }
 
 inline bool     Solver::solve         () { return solve_().isTrue(); }
 inline Bool    Solver::solveLimited  () { return solve_(); }

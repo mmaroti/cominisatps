@@ -65,7 +65,7 @@ Solver::Solver() :
     // Statistics: (formerly in 'SolverStats')
     //
   , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0), conflicts_glue(0)
-  , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
+  , clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
 
   , ok                 (true)
   , tier2_learnts_dirty(false)
@@ -101,23 +101,24 @@ Solver::~Solver() {
 // Creates a new SAT variable in the solver. If 'decision' is cleared, variable will not be
 // used as a decision variable (NOTE! This has effects on the meaning of a SATISFIABLE result).
 //
-Var Solver::newVar(bool sign, bool dvar)
+Var Solver::newVar(bool polarity, bool decision)
 {
     int v = nVars();
     watches_bin.init(Literal(v, false));
     watches_bin.init(Literal(v, true ));
     watches  .init(Literal(v, false));
     watches  .init(Literal(v, true ));
-    values.addVariable();
+    values.addVariable(polarity, decision);
+    if (decision) {
+    	order_heap_no_r.insert(v);
+    	order_heap_glue_r.insert(v);
+    }
     vardata  .push(mkVarData(CRef_Undef, 0));
     activity_no_r  .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
     activity_glue_r.push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
     seen     .push(0);
     seen2    .push(0);
-    polarity .push(sign);
-    decision .push();
     trail    .capacity(v+1);
-    setDecisionVar(v, dvar);
     return v;
 }
 
@@ -204,7 +205,7 @@ void Solver::cancelUntil(int level) {
             Var      x  = trail[c].var();
             values.setUndef(x);
             if (phase_saving > 1 || ((phase_saving == 1) && c > trail_lim.last()))
-                polarity[x] = trail[c].sign();
+                values.setPolarity(x, trail[c].sign());
             insertVarOrder(x); }
         qhead = trail_lim[level];
         trail.shrink(trail.size() - trail_lim[level]);
@@ -221,14 +222,14 @@ Literal Solver::pickBranchLit()
     Heap<VarOrderLt>& order_heap = glucose_restart ? order_heap_glue_r : order_heap_no_r;
 
     // Activity based decision:
-    while (next == VAR_UNDEF || !values.isUndef(next) || !decision[next]) {
+    while (next == VAR_UNDEF || !values.isUndef(next) || !values.getDecision(next)) {
         if (order_heap.empty())
             return LIT_UNDEF;
         else
             next = order_heap.removeMin();
     }
 
-    return Literal(next, polarity[next]);
+    return Literal(next, values.getPolarity(next));
 }
 
 /*_________________________________________________________________________________________________
@@ -629,7 +630,7 @@ void Solver::rebuildOrderHeap()
 {
     vec<Var> vs;
     for (Var v = 0; v < nVars(); v++)
-        if (decision[v] && values.isUndef(v))
+        if (values.isUndef(v) && values.getDecision(v))
             vs.push(v);
 
     order_heap_no_r  .build(vs);
