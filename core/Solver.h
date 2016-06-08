@@ -142,7 +142,6 @@ protected:
     Values			    values;			  // the current assignments
     vec<Literal>        trail;            // Assignment stack; stores all assignments made in the order they were made.
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
-    vec<VarData>        vardata;          // Stores reason and level for each variable.
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
     int                 simpDB_assigns;   // Number of top-level assignments since last execution of 'simplify()'.
     int64_t             simpDB_props;     // Remaining number of propagations that must be made before next execution of 'simplify()'.
@@ -209,16 +208,14 @@ protected:
     // Misc:
     //
     int      decisionLevel    ()      const; // Gives the current decisionlevel.
-    uint32_t abstractLevel    (Var x) const; // Used to represent an abstraction of sets of decision levels.
-    CRef     reason           (Var x) const;
-    int      level            (Var x) const;
+    uint32_t abstractLevel    (Literal p) const; // Used to represent an abstraction of sets of decision levels.
 
     template<class V> int computeLBD(const V& c) {
         int lbd = 0;
 
         counter++;
         for (int i = 0; i < c.size(); i++){
-            int l = level(c[i].var());
+            int l = values.getLevel(c[i]);
             if (l != 0 && seen2[l] != counter){
                 seen2[l] = counter;
                 lbd++; } }
@@ -244,9 +241,6 @@ protected:
 
 //=================================================================================================
 // Implementation of inline methods:
-
-inline CRef Solver::reason(Var x) const { return vardata[x].reason; }
-inline int  Solver::level (Var x) const { return vardata[x].level; }
 
 inline void Solver::insertVarOrder(Var x) {
     Heap<VarOrderLt>& order_heap = glucose_restart ? order_heap_glue_r : order_heap_no_r;
@@ -292,18 +286,18 @@ inline bool     Solver::addClause       (Literal p, Literal q)          { add_tm
 inline bool     Solver::addClause       (Literal p, Literal q, Literal r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
 inline bool     Solver::locked          (const Clause& c) const {
     int i = c.size() != 2 ? 0 : (values.isTrue(c[0]) ? 0 : 1);
-    return values.isTrue(c[i]) && reason(c[i].var()) != CRef_Undef && ca.lea(reason(c[i].var())) == &c;
+    return values.isTrue(c[i]) && values.getReason(c[i]) != CRef_Undef && ca.lea(values.getReason(c[i])) == &c;
 }
 inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size()); }
 
 inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
-inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level(x) & 31); }
+inline uint32_t Solver::abstractLevel (Literal p) const   { return 1 << (values.getLevel(p) & 31); }
 inline Bool    Solver::modelValue    (Var x) const   { return model[x]; }
 inline Bool    Solver::modelValue    (Literal p) const   { return model[p.var()] ^ p.sign(); }
 inline int      Solver::nAssigns      ()      const   { return trail.size(); }
 inline int      Solver::nClauses      ()      const   { return clauses.size(); }
 inline int      Solver::nLearnts      ()      const   { return learnts_core.size() + learnts_tier2.size() + learnts_local.size(); }
-inline int      Solver::nVars         ()      const   { return vardata.size(); }
+inline int      Solver::nVars         ()      const   { return values.getVarCount(); }
 inline int      Solver::nFreeVars     ()      const   { return values.getDecisionVars() - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]); }
 
 inline bool     Solver::solve         () { return solve_().isTrue(); }

@@ -25,22 +25,25 @@
 
 #include "Bool.h"
 #include "Literal.h"
+#include "SolverTypes.h"
 #include "mtl/Vec.h"
 
 namespace Minisat {
 
 class Values {
 	struct Data {
-		unsigned polarity :1; // preferred polarity for next decision
-		unsigned decision :1; // eligible for decision making
+		unsigned polarity :1;	// preferred polarity for next decision
+		unsigned decision :1;	// eligible for decision making
+		unsigned level :30;		// decision level
+		CRef reason;			// clause forcing the decision
 
 		Data(bool p, bool d) :
-				polarity(p), decision(d) {
+				polarity(p), decision(d), level(0), reason(CRef_Undef) {
 		}
 	};
 
-	vec<Bool> values; // the current assignments of variables
-	vec<Data> data;
+	vec<Bool> values;	// the current assignments of variables
+	vec<Data> data;		// auxiliary data for each variable
 	int decision_vars;	// number of decision variables
 
 public:
@@ -106,6 +109,30 @@ public:
 
 	int getDecisionVars() const {
 		return decision_vars;
+	}
+
+	int getVarCount() const {
+		return data.size();
+	}
+
+	CRef getReason(Literal lit) const {
+		return data[lit.var()].reason;
+	}
+
+	void setReason(Literal lit, CRef cref) {
+		data[lit.var()].reason = cref;
+	}
+
+	CRef &refReason(Literal lit) {
+		return data[lit.var()].reason;
+	}
+
+	int getLevel(Literal lit) const {
+		return data[lit.var()].level;
+	}
+
+	void setLevel(Literal lit, int level) {
+		data[lit.var()].level = level;
 	}
 };
 

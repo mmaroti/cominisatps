@@ -103,7 +103,7 @@ Solver::~Solver() {
 //
 Var Solver::newVar(bool polarity, bool decision)
 {
-    int v = nVars();
+    int v = values.getVarCount();
     watches_bin.init(Literal(v, false));
     watches_bin.init(Literal(v, true ));
     watches  .init(Literal(v, false));
@@ -113,7 +113,6 @@ Var Solver::newVar(bool polarity, bool decision)
     	order_heap_no_r.insert(v);
     	order_heap_glue_r.insert(v);
     }
-    vardata  .push(mkVarData(CRef_Undef, 0));
     activity_no_r  .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
     activity_glue_r.push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
     seen     .push(0);
@@ -185,7 +184,8 @@ void Solver::removeClause(CRef cr) {
     // Don't leave pointers to free'd memory!
     if (locked(c)){
         Literal implied = c.size() != 2 ? c[0] : (values.isTrue(c[0]) ? c[0] : c[1]);
-        vardata[implied.var()].reason = CRef_Undef; }
+        values.setReason(implied, CRef_Undef);
+    }
     c.mark(1);
     ca.free(cr);
 }
@@ -296,12 +296,12 @@ void Solver::analyze(CRef confl, vec<Literal>& out_learnt, int& out_btlevel, int
         for (int j = (p == LIT_UNDEF) ? 0 : 1; j < c.size(); j++){
             Literal q = c[j];
 
-            if (!seen[q.var()] && level(q.var()) > 0){
+            if (!seen[q.var()] && values.getLevel(q) > 0){
                 varBumpActivity(q.var());
                 seen[q.var()] = 1;
-                if (level(q.var()) >= decisionLevel()){
+                if (values.getLevel(q) >= decisionLevel()){
 #ifdef EXTRA_VAR_ACT_BUMP
-                    if (reason(q.var()) != CRef_Undef && ca[reason(q.var())].learnt())
+                    if (values.getReason(q) != CRef_Undef && ca[values.getReason(q)].learnt())
                         add_tmp.push(q);
 #endif
                     pathC++;
@@ -313,7 +313,7 @@ void Solver::analyze(CRef confl, vec<Literal>& out_learnt, int& out_btlevel, int
         // Select next clause to look at:
         while (!seen[trail[index--].var()]);
         p     = trail[index+1];
-        confl = reason(p.var());
+        confl = values.getReason(p);
         seen[p.var()] = 0;
         pathC--;
 
@@ -327,22 +327,20 @@ void Solver::analyze(CRef confl, vec<Literal>& out_learnt, int& out_btlevel, int
     if (ccmin_mode == 2){
         uint32_t abstract_level = 0;
         for (i = 1; i < out_learnt.size(); i++)
-            abstract_level |= abstractLevel(out_learnt[i].var()); // (maintain an abstraction of levels involved in conflict)
+            abstract_level |= abstractLevel(out_learnt[i]); // (maintain an abstraction of levels involved in conflict)
 
         for (i = j = 1; i < out_learnt.size(); i++)
-            if (reason(out_learnt[i].var()) == CRef_Undef || !litRedundant(out_learnt[i], abstract_level))
+            if (values.getReason(out_learnt[i]) == CRef_Undef || !litRedundant(out_learnt[i], abstract_level))
                 out_learnt[j++] = out_learnt[i];
 
     }else if (ccmin_mode == 1){
         for (i = j = 1; i < out_learnt.size(); i++){
-            Var x = out_learnt[i].var();
-
-            if (reason(x) == CRef_Undef)
+            if (values.getReason(out_learnt[i]) == CRef_Undef)
                 out_learnt[j++] = out_learnt[i];
             else{
-                Clause& c = ca[reason(out_learnt[i].var())];
+                Clause& c = ca[values.getReason(out_learnt[i])];
                 for (int k = c.size() == 2 ? 0 : 1; k < c.size(); k++)
-                    if (!seen[c[k].var()] && level(c[k].var()) > 0){
+                    if (!seen[c[k].var()] && values.getLevel(c[k]) > 0){
                         out_learnt[j++] = out_learnt[i];
                         break; }
             }
@@ -367,13 +365,13 @@ void Solver::analyze(CRef confl, vec<Literal>& out_learnt, int& out_btlevel, int
         int max_i = 1;
         // Find the first literal assigned at the next-highest level:
         for (int i = 2; i < out_learnt.size(); i++)
-            if (level(out_learnt[i].var()) > level(out_learnt[max_i].var()))
+            if (values.getLevel(out_learnt[i]) > values.getLevel(out_learnt[max_i]))
                 max_i = i;
         // Swap-in this literal at index 1:
         Literal p             = out_learnt[max_i];
         out_learnt[max_i] = out_learnt[1];
         out_learnt[1]     = p;
-        out_btlevel       = level(p.var());
+        out_btlevel       = values.getLevel(p);
     }
 
     for (int j = 0; j < analyze_toclear.size(); j++) seen[analyze_toclear[j].var()] = 0;    // ('seen[]' is now cleared)
@@ -381,7 +379,7 @@ void Solver::analyze(CRef confl, vec<Literal>& out_learnt, int& out_btlevel, int
 #ifdef EXTRA_VAR_ACT_BUMP
     if (add_tmp.size() > 0){
         for (int i = 0; i< add_tmp.size(); i++)
-            if (ca[reason(add_tmp[i].var())].lbd() < out_lbd)
+            if (ca[values.getReason(add_tmp[i])].lbd() < out_lbd)
                 varBumpActivity(add_tmp[i].var());
         add_tmp.clear(); }
 #endif
@@ -426,8 +424,8 @@ bool Solver::litRedundant(Literal p, uint32_t abstract_levels)
     analyze_stack.clear(); analyze_stack.push(p);
     int top = analyze_toclear.size();
     while (analyze_stack.size() > 0){
-        assert(reason(analyze_stack.last().var()) != CRef_Undef);
-        Clause& c = ca[reason(analyze_stack.last().var())]; analyze_stack.pop();
+        assert(values.getReason(analyze_stack.last()) != CRef_Undef);
+        Clause& c = ca[values.getReason(analyze_stack.last())]; analyze_stack.pop();
 
         // Special handling for binary clauses like in 'analyze()'.
         if (c.size() == 2 && values.isFalse(c[0])){
@@ -437,8 +435,8 @@ bool Solver::litRedundant(Literal p, uint32_t abstract_levels)
 
         for (int i = 1; i < c.size(); i++){
             Literal p  = c[i];
-            if (!seen[p.var()] && level(p.var()) > 0){
-                if (reason(p.var()) != CRef_Undef && (abstractLevel(p.var()) & abstract_levels) != 0){
+            if (!seen[p.var()] && values.getLevel(p) > 0){
+                if (values.getReason(p) != CRef_Undef && (abstractLevel(p) & abstract_levels) != 0){
                     seen[p.var()] = 1;
                     analyze_stack.push(p);
                     analyze_toclear.push(p);
@@ -459,7 +457,8 @@ void Solver::uncheckedEnqueue(Literal p, CRef from)
 {
     assert(values.isUndef(p));
     values.setFalse(p);
-    vardata[p.var()] = mkVarData(from, decisionLevel());
+    values.setReason(p, from);
+    values.setLevel(p, decisionLevel());
     trail.push_(p);
 }
 
@@ -868,10 +867,8 @@ void Solver::relocAll(ClauseAllocator& to)
     // All reasons:
     //
     for (int i = 0; i < trail.size(); i++){
-        Var v = trail[i].var();
-
-        if (reason(v) != CRef_Undef && (ca[reason(v)].reloced() || locked(ca[reason(v)])))
-            ca.reloc(vardata[v].reason, to);
+        if (values.getReason(trail[i]) != CRef_Undef && (ca[values.getReason(trail[i])].reloced() || locked(ca[values.getReason(trail[i])])))
+            ca.reloc(values.refReason(trail[i]), to);
     }
 
     // All learnt:
