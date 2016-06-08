@@ -37,7 +37,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "utils/Options.h"
 #include "SolverTypes.h"
 #include "Bool.h"
-#include "Values.h"
+#include "Variables.h"
 
 
 // Don't change the actual numbers.
@@ -139,7 +139,7 @@ protected:
                         var_inc_glue_r;
     OccLists            watches_bin,      // Watches for binary clauses only.
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
-    Values			    values;			  // the current assignments
+    Variables			vars;			  // the current assignments
     vec<Literal>        trail;            // Assignment stack; stores all assignments made in the order they were made.
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
@@ -215,7 +215,7 @@ protected:
 
         counter++;
         for (int i = 0; i < c.size(); i++){
-            int l = values.getLevel(c[i]);
+            int l = vars.getLevel(c[i]);
             if (l != 0 && seen2[l] != counter){
                 seen2[l] = counter;
                 lbd++; } }
@@ -244,7 +244,7 @@ protected:
 
 inline void Solver::insertVarOrder(Var x) {
     Heap<VarOrderLt>& order_heap = glucose_restart ? order_heap_glue_r : order_heap_no_r;
-    if (!order_heap.inHeap(x) && values.getDecision(x)) order_heap.insert(x); }
+    if (!order_heap.inHeap(x) && vars.getDecision(x)) order_heap.insert(x); }
 
 inline void Solver::varDecayActivity() {
     var_inc_glue_r *= (1 / var_decay_glue_r);
@@ -285,20 +285,20 @@ inline bool     Solver::addClause       (Literal p)                 { add_tmp.cl
 inline bool     Solver::addClause       (Literal p, Literal q)          { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
 inline bool     Solver::addClause       (Literal p, Literal q, Literal r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
 inline bool     Solver::locked          (const Clause& c) const {
-    int i = c.size() != 2 ? 0 : (values.isTrue(c[0]) ? 0 : 1);
-    return values.isTrue(c[i]) && values.getReason(c[i]) != CRef_Undef && ca.lea(values.getReason(c[i])) == &c;
+    int i = c.size() != 2 ? 0 : (vars.isTrue(c[0]) ? 0 : 1);
+    return vars.isTrue(c[i]) && vars.getReason(c[i]) != CRef_Undef && ca.lea(vars.getReason(c[i])) == &c;
 }
 inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size()); }
 
 inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
-inline uint32_t Solver::abstractLevel (Literal p) const   { return 1 << (values.getLevel(p) & 31); }
+inline uint32_t Solver::abstractLevel (Literal p) const   { return 1 << (vars.getLevel(p) & 31); }
 inline Bool    Solver::modelValue    (Var x) const   { return model[x]; }
 inline Bool    Solver::modelValue    (Literal p) const   { return model[p.var()] ^ p.sign(); }
 inline int      Solver::nAssigns      ()      const   { return trail.size(); }
 inline int      Solver::nClauses      ()      const   { return clauses.size(); }
 inline int      Solver::nLearnts      ()      const   { return learnts_core.size() + learnts_tier2.size() + learnts_local.size(); }
-inline int      Solver::nVars         ()      const   { return values.getVarCount(); }
-inline int      Solver::nFreeVars     ()      const   { return values.getDecisionVars() - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]); }
+inline int      Solver::nVars         ()      const   { return vars.getVarCount(); }
+inline int      Solver::nFreeVars     ()      const   { return vars.getDecisionVars() - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]); }
 
 inline bool     Solver::solve         () { return solve_().isTrue(); }
 inline Bool    Solver::solveLimited  () { return solve_(); }

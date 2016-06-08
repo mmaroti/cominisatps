@@ -30,7 +30,7 @@
 
 namespace Minisat {
 
-class Values {
+class Variables {
 	struct Data {
 		unsigned polarity :1;	// preferred polarity for next decision
 		unsigned decision :1;	// eligible for decision making
