@@ -65,7 +65,7 @@ Solver::Solver() :
     // Statistics: (formerly in 'SolverStats')
     //
   , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0), conflicts_glue(0)
-  , clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
+  , clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0), bin_propagations(0)
 
   , ok                 (true)
   , tier2_learnts_dirty(false)
@@ -478,6 +478,7 @@ CRef Solver::propagate()
 {
     CRef    confl     = CRef_Undef;
     int     num_props = 0;
+    int     num_bin_props = 0;
     watches.cleanAll();
     watches_bin.cleanAll();
 
@@ -493,8 +494,10 @@ CRef Solver::propagate()
             if (vars.isFalse(the_other)){
                 confl = ws_bin[k].cref;
                 goto ExitProp;
-            }else if(vars.isUndef(the_other))
+            }else if(vars.isUndef(the_other)) {
+            	num_bin_props++;
                 uncheckedEnqueue(the_other, ws_bin[k].cref);
+            }
         }
 
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;){
@@ -543,6 +546,7 @@ CRef Solver::propagate()
 
 ExitProp:;
     propagations += num_props;
+    bin_propagations += num_bin_props;
     simpDB_props -= num_props;
 
     return confl;
